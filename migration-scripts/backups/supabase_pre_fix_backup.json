@@ -1,0 +1,599 @@
+{
+  "user": [],
+  "category": [],
+  "subcategory": [],
+  "store": [],
+  "storeCategory": [],
+  "storeSubcategory": [],
+  "coupon": [],
+  "badge": [],
+  "blogPost": [],
+  "slider": [],
+  "promoBanner": [],
+  "translation": [
+    {
+      "id": "68b564da-c7af-43c6-8f93-08d59cf43ad7",
+      "key": "searchOffers",
+      "source": "Search Offers...",
+      "value": "",
+      "createdAt": "2026-09-07T11:40:33.301Z",
+      "updatedAt": "2026-09-07T12:04:52.208Z"
+    },
+    {
+      "id": "b0b21acc-805a-4536-9873-fde588b77730",
+      "key": "verifiedAccount",
+      "source": "Verified Account",
+      "value": "",
+      "createdAt": "2026-09-07T11:40:33.302Z",
+      "updatedAt": "2026-09-07T12:04:52.208Z"
+    },
+    {
+      "id": "65e93089-77c3-430f-9686-49e115c3a814",
+      "key": "trendingCoupons",
+      "source": "Shop Today's Trending Coupon and Save Big",
+      "value": "",
+      "createdAt": "2026-09-07T11:40:33.302Z",
+      "updatedAt": "2026-09-07T12:04:52.208Z"
+    },
+    {
+      "id": "d069e746-18e3-457d-924b-a56b6377120f",
+      "key": "viewProfile",
+      "source": "View Profile",
+      "value": "",
+      "createdAt": "2026-09-07T11:40:33.302Z",
+      "updatedAt": "2026-09-07T12:04:52.208Z"
+    },
+    {
+      "id": "41b24029-05d8-4cf3-9335-be22426b21ed",
+      "key": "signIn",
+      "source": "Sign In",
+      "value": "",
+      "createdAt": "2026-09-07T11:40:33.302Z",
+      "updatedAt": "2026-09-07T12:04:52.208Z"
+    },
+    {
+      "id": "d006b754-de5b-4f85-bc6f-f69f3f9bbaa2",
+      "key": "featuredCoupons",
+      "source": "Featured Coupons",
+      "value": "",
+      "createdAt": "2026-09-07T11:40:33.302Z",
+      "updatedAt": "2026-09-07T12:04:52.208Z"
+    },
+    {
+      "id": "5732ccab-26f5-4206-9c06-a724e60875fd",
+      "key": "latestCoupons",
+      "source": "Latest Coupons",
+      "value": "",
+      "createdAt": "2026-09-07T11:40:33.302Z",
+      "updatedAt": "2026-09-07T12:04:52.208Z"
+    },
+    {
+      "id": "e607e5f1-482a-4290-a803-699b670c35c4",
+      "key": "exclusive",
+      "source": "Exclusive",
+      "value": "",
+      "createdAt": "2026-09-07T11:40:33.302Z",
+      "updatedAt": "2026-09-07T12:04:52.208Z"
+    },
+    {
+      "id": "7a88724a-febd-4ec6-b85a-2ed462f33246",
+      "key": "couponCount",
+      "source": "Over 20 000+ Coupons. Grab one now!",
+      "value": "",
+      "createdAt": "2026-09-07T11:40:33.302Z",
+      "updatedAt": "2026-09-07T12:04:52.208Z"
+    },
+    {
+      "id": "5efd872a-2510-4349-a215-0234c7d7e45e",
+      "key": "hoursLeft",
+      "source": "Hours Left",
+      "value": "",
+      "createdAt": "2026-09-07T11:40:33.302Z",
+      "updatedAt": "2026-09-07T12:04:52.208Z"
+    },
+    {
+      "id": "7c4bcaca-bd52-4226-858a-18eaff903002",
+      "key": "featuredCategories",
+      "source": "Featured Categories",
+      "value": "",
+      "createdAt": "2026-09-07T11:40:33.302Z",
+      "updatedAt": "2026-09-07T12:04:52.208Z"
+    },
+    {
+      "id": "f80c7b7d-7b7d-48d6-9c9e-6e6410c0e4d8",
+      "key": "featured",
+      "source": "Featured",
+      "value": "",
+      "createdAt": "2026-09-07T11:40:33.302Z",
+      "updatedAt": "2026-09-07T12:04:52.208Z"
+    },
+    {
+      "id": "312dd7f8-71b5-4738-b73f-dcc6e02ae6c9",
+      "key": "off",
+      "source": "% Off",
+      "value": "",
+      "createdAt": "2026-09-07T11:40:33.302Z",
+      "updatedAt": "2026-09-07T12:04:52.208Z"
+    },
+    {
+      "id": "ce4a4582-6ad8-4510-8c58-9da7f4166f50",
+      "key": "exclusiveCoupons",
+      "source": "Exclusive Coupons",
+      "value": "",
+      "createdAt": "2026-09-07T11:40:33.302Z",
+      "updatedAt": "2026-09-07T12:04:52.208Z"
+    },
+    {
+      "id": "269a42b9-e3da-4aa4-ab5b-ccb5a7d38cdb",
+      "key": "minutesLeft",
+      "source": "Minutes Left",
+      "value": "",
+      "createdAt": "2026-09-07T11:40:33.302Z",
+      "updatedAt": "2026-09-07T12:04:52.208Z"
+    },
+    {
+      "id": "0c20549d-e73c-4bc7-863a-6ae3c21cb7ef",
+      "key": "featuredLocations",
+      "source": "Featured Locations",
+      "value": "",
+      "createdAt": "2026-09-07T11:40:33.302Z",
+      "updatedAt": "2026-09-07T12:04:52.208Z"
+    },
+    {
+      "id": "2ccebb65-8348-436f-804b-011ec810ffc4",
+      "key": "new",
+      "source": "New",
+      "value": "",
+      "createdAt": "2026-09-07T11:40:33.302Z",
+      "updatedAt": "2026-09-07T12:04:52.208Z"
+    },
+    {
+      "id": "6f2f7c77-106a-4ee7-bad2-66edac16bd6c",
+      "key": "viewAll",
+      "source": "View All",
+      "value": "",
+      "createdAt": "2026-09-07T11:40:33.302Z",
+      "updatedAt": "2026-09-07T12:04:52.208Z"
+    },
+    {
+      "id": "6d36daa0-2b78-4760-b370-d48b3a2958a2",
+      "key": "getCode",
+      "source": "Get Code",
+      "value": "",
+      "createdAt": "2026-09-07T11:40:33.302Z",
+      "updatedAt": "2026-09-07T12:04:52.208Z"
+    },
+    {
+      "id": "2d50decd-9184-4900-b5e7-a36abaf22fc0",
+      "key": "copyCodeInstruction",
+      "source": "Copy and paste this code at",
+      "value": "",
+      "createdAt": "2026-09-07T11:40:33.302Z",
+      "updatedAt": "2026-09-07T12:04:52.208Z"
+    },
+    {
+      "id": "fef5ded3-76dd-47e9-894c-9e8ca2294862",
+      "key": "expire",
+      "source": "Expire:",
+      "value": "",
+      "createdAt": "2026-09-07T11:40:33.302Z",
+      "updatedAt": "2026-09-07T12:04:52.208Z"
+    },
+    {
+      "id": "3235fc9c-4349-4a13-b865-15a066e11f24",
+      "key": "verified",
+      "source": "Verified",
+      "value": "",
+      "createdAt": "2026-09-07T11:40:33.302Z",
+      "updatedAt": "2026-09-07T12:04:52.208Z"
+    },
+    {
+      "id": "ecdfa299-3a4d-4aae-921b-d2951a2e3b8a",
+      "key": "status",
+      "source": "Status:",
+      "value": "",
+      "createdAt": "2026-09-07T11:40:33.302Z",
+      "updatedAt": "2026-09-07T12:04:52.208Z"
+    },
+    {
+      "id": "0ca7706e-c8f1-4efe-a11b-91e6dfeeeb0c",
+      "key": "notVerified",
+      "source": "Not Verified",
+      "value": "",
+      "createdAt": "2026-09-07T11:40:33.302Z",
+      "updatedAt": "2026-09-07T12:04:52.208Z"
+    },
+    {
+      "id": "4efba139-905f-4ed6-9434-fe711f9e956b",
+      "key": "facebook",
+      "source": "Facebook",
+      "value": "",
+      "createdAt": "2026-09-07T11:40:33.302Z",
+      "updatedAt": "2026-09-07T12:04:52.208Z"
+    },
+    {
+      "id": "2d8173c8-d0cb-483f-95be-70504ded954e",
+      "key": "twitter",
+      "source": "Twitter",
+      "value": "",
+      "createdAt": "2026-09-07T11:40:33.302Z",
+      "updatedAt": "2026-09-07T12:04:52.208Z"
+    },
+    {
+      "id": "2a81de6e-bf36-4a20-a72b-5662d126d663",
+      "key": "saleEnds",
+      "source": "Sale Ends",
+      "value": "",
+      "createdAt": "2026-09-07T11:40:33.302Z",
+      "updatedAt": "2026-09-07T12:04:52.208Z"
+    },
+    {
+      "id": "9dec48bb-6b05-45e6-8ed5-7db147312cfb",
+      "key": "aboutUsDescription",
+      "source": "An About Us page helps your company make a good first impression, and is critical for building customer trust.",
+      "value": "",
+      "createdAt": "2026-09-07T11:40:33.302Z",
+      "updatedAt": "2026-09-07T12:04:52.208Z"
+    },
+    {
+      "id": "aca6832e-e1e9-42fb-8a42-cb67bb9a4d62",
+      "key": "buyNow",
+      "source": "Buy Now",
+      "value": "",
+      "createdAt": "2026-09-07T11:40:33.302Z",
+      "updatedAt": "2026-09-07T12:04:52.208Z"
+    },
+    {
+      "id": "99c4d754-6e4b-4059-8f21-0a4239256866",
+      "key": "telegram",
+      "source": "Telegram",
+      "value": "",
+      "createdAt": "2026-09-07T11:40:33.302Z",
+      "updatedAt": "2026-09-07T12:04:52.208Z"
+    },
+    {
+      "id": "72df0505-2519-4bae-b825-2704ba301f61",
+      "key": "pinterest",
+      "source": "Pinterest",
+      "value": "",
+      "createdAt": "2026-09-07T11:40:33.302Z",
+      "updatedAt": "2026-09-07T12:04:52.208Z"
+    },
+    {
+      "id": "391ef374-3c4a-40a3-a374-06aa05d88703",
+      "key": "subscribeNow",
+      "source": "Subscribe Now",
+      "value": "",
+      "createdAt": "2026-09-07T11:40:33.302Z",
+      "updatedAt": "2026-09-07T12:04:52.208Z"
+    },
+    {
+      "id": "cd8c5b5e-7231-4d47-8b4b-9f143461fddd",
+      "key": "hurryUp",
+      "source": "Hurry Up, End Soon!",
+      "value": "",
+      "createdAt": "2026-09-07T11:40:33.302Z",
+      "updatedAt": "2026-09-07T12:04:52.208Z"
+    },
+    {
+      "id": "2a898b12-3bb8-44f9-a3c3-b5096a5c1bcd",
+      "key": "getInTouch",
+      "source": "Get In Touch",
+      "value": "",
+      "createdAt": "2026-09-07T11:40:33.302Z",
+      "updatedAt": "2026-09-07T12:04:52.208Z"
+    },
+    {
+      "id": "072031fa-7fea-4752-970f-9f51526d6286",
+      "key": "aboutUs",
+      "source": "About Us",
+      "value": "",
+      "createdAt": "2026-09-07T11:40:33.302Z",
+      "updatedAt": "2026-09-07T12:04:52.208Z"
+    },
+    {
+      "id": "c8738efa-d272-4cba-898c-6c30cc15def5",
+      "key": "tumblr",
+      "source": "Tumblr",
+      "value": "",
+      "createdAt": "2026-09-07T11:40:33.302Z",
+      "updatedAt": "2026-09-07T12:04:52.208Z"
+    },
+    {
+      "id": "e44ee814-bc53-4399-99b3-798c359852e6",
+      "key": "offerUnavailable",
+      "source": "Sorry, the offer you're looking for is no longer available. Try other great offers below!",
+      "value": "",
+      "createdAt": "2026-09-07T11:40:33.302Z",
+      "updatedAt": "2026-09-07T12:04:52.208Z"
+    },
+    {
+      "id": "f9f20f1a-e7e6-434f-9ecf-7e441787044e",
+      "key": "whatsapp",
+      "source": "WhatsApp",
+      "value": "",
+      "createdAt": "2026-09-07T11:40:33.302Z",
+      "updatedAt": "2026-09-07T12:04:52.208Z"
+    },
+    {
+      "id": "ff2a53eb-e189-4017-ba42-b58799a956fd",
+      "key": "totalCoupons",
+      "source": "Total Coupons",
+      "value": "",
+      "createdAt": "2026-09-07T11:40:33.302Z",
+      "updatedAt": "2026-09-07T12:04:52.208Z"
+    },
+    {
+      "id": "1b4b1e85-04b3-4cb8-8fee-8d63027b390d",
+      "key": "newsletter",
+      "source": "Newsletter",
+      "value": "",
+      "createdAt": "2026-09-07T11:40:33.302Z",
+      "updatedAt": "2026-09-07T12:04:52.208Z"
+    },
+    {
+      "id": "1898c303-3cb6-4052-b29f-f4031172d68d",
+      "key": "featuredStores",
+      "source": "Featured Stores",
+      "value": "",
+      "createdAt": "2026-09-07T11:40:33.302Z",
+      "updatedAt": "2026-09-07T12:04:52.208Z"
+    },
+    {
+      "id": "a2469f0a-dde4-4b5c-bffc-32a8c62f25f1",
+      "key": "quickLinks",
+      "source": "Quick Links",
+      "value": "",
+      "createdAt": "2026-09-07T11:40:33.302Z",
+      "updatedAt": "2026-09-07T12:04:52.208Z"
+    },
+    {
+      "id": "c1d4ae9a-b664-43e5-9f19-dada87642bf6",
+      "key": "emailAddress",
+      "source": "Email Address",
+      "value": "",
+      "createdAt": "2026-09-07T11:40:33.302Z",
+      "updatedAt": "2026-09-07T12:04:52.208Z"
+    },
+    {
+      "id": "c7390282-c1c8-458b-ba90-ae034c6fc18a",
+      "key": "copyright",
+      "source": "© 2022 Couponza | Coupons & Discounts",
+      "value": "",
+      "createdAt": "2026-09-07T11:40:33.302Z",
+      "updatedAt": "2026-09-07T12:04:52.208Z"
+    },
+    {
+      "id": "92f84e7c-9726-4217-b95b-88782c96cac0",
+      "key": "reviews",
+      "source": "Review(s)",
+      "value": "",
+      "createdAt": "2026-09-07T11:40:33.302Z",
+      "updatedAt": "2026-09-07T12:04:52.208Z"
+    },
+    {
+      "id": "227308bd-78f0-459e-bd43-dc583ff87087",
+      "key": "shareCoupon",
+      "source": "Share This Coupon",
+      "value": "",
+      "createdAt": "2026-09-07T11:40:33.302Z",
+      "updatedAt": "2026-09-07T12:04:52.208Z"
+    },
+    {
+      "id": "69ab6c14-0c4d-437e-b3a7-706b972569f3",
+      "key": "customerReviews",
+      "source": "Customer Reviews",
+      "value": "",
+      "createdAt": "2026-09-07T11:40:33.302Z",
+      "updatedAt": "2026-09-07T12:04:52.208Z"
+    },
+    {
+      "id": "523e9cf6-c85a-44f3-b16b-9598760b854d",
+      "key": "writeReview",
+      "source": "Write Review",
+      "value": "",
+      "createdAt": "2026-09-07T11:40:33.302Z",
+      "updatedAt": "2026-09-07T12:04:52.208Z"
+    },
+    {
+      "id": "48822b77-dca8-41ff-9767-b3d4ec8ebb01",
+      "key": "loadMore",
+      "source": "Load More...",
+      "value": "",
+      "createdAt": "2026-09-07T11:40:33.302Z",
+      "updatedAt": "2026-09-07T12:04:52.208Z"
+    },
+    {
+      "id": "364164d8-5ada-4858-ab88-8864e848e6f0",
+      "key": "store",
+      "source": "Store",
+      "value": "",
+      "createdAt": "2026-09-07T11:40:33.302Z",
+      "updatedAt": "2026-09-07T12:04:52.208Z"
+    },
+    {
+      "id": "d699eb07-3be0-441f-9163-d7592fb71e46",
+      "key": "seeAllReviews",
+      "source": "See All Reviews",
+      "value": "",
+      "createdAt": "2026-09-07T11:40:33.302Z",
+      "updatedAt": "2026-09-07T12:04:52.208Z"
+    },
+    {
+      "id": "128a9911-2242-4f1f-8ce3-cdcc2b3726f5",
+      "key": "noReviews",
+      "source": "No Reviews Found",
+      "value": "",
+      "createdAt": "2026-09-07T11:40:33.302Z",
+      "updatedAt": "2026-09-07T12:04:52.208Z"
+    },
+    {
+      "id": "b94517e9-c4b7-409a-9b8d-5580ee6eafb4",
+      "key": "brand",
+      "source": "Brand",
+      "value": "",
+      "createdAt": "2026-09-07T11:40:33.302Z",
+      "updatedAt": "2026-09-07T12:04:52.208Z"
+    },
+    {
+      "id": "e8ecd0a4-685b-4c88-9c34-afe5e2f0c1f5",
+      "key": "search",
+      "source": "Search",
+      "value": "",
+      "createdAt": "2026-09-07T11:40:33.302Z",
+      "updatedAt": "2026-09-07T12:04:52.208Z"
+    },
+    {
+      "id": "9189c5ef-540e-4e2f-bca5-4786ce03abaf",
+      "key": "copy",
+      "source": "Copy",
+      "value": "",
+      "createdAt": "2026-09-07T11:40:33.302Z",
+      "updatedAt": "2026-09-07T12:04:52.208Z"
+    },
+    {
+      "id": "172286ea-cb60-4806-89d0-235a773a34a0",
+      "key": "topRated",
+      "source": "Top Rated",
+      "value": "",
+      "createdAt": "2026-09-07T11:40:33.302Z",
+      "updatedAt": "2026-09-07T12:04:52.208Z"
+    },
+    {
+      "id": "2972fe0e-2190-49b8-9c9b-4d284e3c0a35",
+      "key": "noCodeNeeded",
+      "source": "Tip: No code needed!",
+      "value": "",
+      "createdAt": "2026-09-07T11:40:33.302Z",
+      "updatedAt": "2026-09-07T12:04:52.208Z"
+    },
+    {
+      "id": "0a85d396-8738-443a-8d7a-0841a9806368",
+      "key": "filter",
+      "source": "Filter",
+      "value": "",
+      "createdAt": "2026-09-07T11:40:33.302Z",
+      "updatedAt": "2026-09-07T12:04:52.208Z"
+    },
+    {
+      "id": "52e346a4-08d0-4cbb-8a66-4d1922714f27",
+      "key": "couponCodes",
+      "source": "Coupon Codes",
+      "value": "",
+      "createdAt": "2026-09-07T11:40:33.302Z",
+      "updatedAt": "2026-09-07T12:04:52.208Z"
+    },
+    {
+      "id": "df677c87-e953-444e-b51f-6e6af10a4cc2",
+      "key": "aboutMe",
+      "source": "About Me",
+      "value": "",
+      "createdAt": "2026-09-07T11:40:33.302Z",
+      "updatedAt": "2026-09-07T12:04:52.208Z"
+    },
+    {
+      "id": "2257a6ec-d360-444e-bbb3-beddd392717a",
+      "key": "sortBy",
+      "source": "Sort By",
+      "value": "",
+      "createdAt": "2026-09-07T11:40:33.302Z",
+      "updatedAt": "2026-09-07T12:04:52.208Z"
+    },
+    {
+      "id": "98aa37f7-b096-4897-8c98-0882310e39e1",
+      "key": "home",
+      "source": "Home",
+      "value": "",
+      "createdAt": "2026-09-07T11:40:33.302Z",
+      "updatedAt": "2026-09-07T12:04:52.208Z"
+    },
+    {
+      "id": "16b971a4-affb-4191-9803-70a0168265dc",
+      "key": "noItemsFound",
+      "source": "No Items Found",
+      "value": "",
+      "createdAt": "2026-09-07T11:40:33.302Z",
+      "updatedAt": "2026-09-07T12:04:52.208Z"
+    },
+    {
+      "id": "22ece74c-1b9a-4bb3-bd8b-39d123c67981",
+      "key": "results",
+      "source": "Results",
+      "value": "",
+      "createdAt": "2026-09-07T11:40:33.302Z",
+      "updatedAt": "2026-09-07T12:04:52.208Z"
+    },
+    {
+      "id": "5965f2f0-5357-475f-9fa3-afadef6c7c9e",
+      "key": "relevance",
+      "source": "Relevance",
+      "value": "",
+      "createdAt": "2026-09-07T11:40:33.302Z",
+      "updatedAt": "2026-09-07T12:04:52.208Z"
+    },
+    {
+      "id": "cc096d0b-91c0-4c1c-8271-f551e7273932",
+      "key": "continueToStore",
+      "source": "Continue to Store",
+      "value": "",
+      "createdAt": "2026-09-07T11:40:33.302Z",
+      "updatedAt": "2026-09-07T12:04:52.208Z"
+    },
+    {
+      "id": "0cc696f7-9d5d-49e7-bb7b-4cba160ed2b6",
+      "key": "details",
+      "source": "Details",
+      "value": "",
+      "createdAt": "2026-09-07T11:40:33.302Z",
+      "updatedAt": "2026-09-07T12:04:52.208Z"
+    },
+    {
+      "id": "0358f387-61dd-4c76-ad97-589dbf4158c5",
+      "key": "default",
+      "source": "Default",
+      "value": "",
+      "createdAt": "2026-09-07T11:40:33.302Z",
+      "updatedAt": "2026-09-07T12:04:52.208Z"
+    },
+    {
+      "id": "4f5fec70-7ddc-4e6a-9221-1d0e6a0befd6",
+      "key": "image",
+      "source": "Image",
+      "value": "",
+      "createdAt": "2026-09-07T11:40:33.302Z",
+      "updatedAt": "2026-09-07T12:04:52.208Z"
+    },
+    {
+      "id": "0d5e5918-5dae-4971-9542-d8c648140d8e",
+      "key": "date",
+      "source": "Date",
+      "value": "",
+      "createdAt": "2026-09-07T11:40:33.302Z",
+      "updatedAt": "2026-09-07T12:04:52.208Z"
+    },
+    {
+      "id": "efc127b1-e635-44ad-bfd5-87f422d6d0a6",
+      "key": "pending",
+      "source": "Pending",
+      "value": "",
+      "createdAt": "2026-09-07T11:40:33.302Z",
+      "updatedAt": "2026-09-07T12:04:52.208Z"
+    },
+    {
+      "id": "e92ba332-0bed-4cf8-a237-1b2b04d99a31",
+      "key": "rating",
+      "source": "Rating",
+      "value": "",
+      "createdAt": "2026-09-07T11:40:33.302Z",
+      "updatedAt": "2026-09-07T12:04:52.208Z"
+    }
+  ],
+  "theme": [],
+  "globalSeo": [],
+  "seoPage": [],
+  "redirect": [],
+  "robotsConfig": [],
+  "sitemapConfig": [],
+  "emailTemplate": [],
+  "siteSettings": []
+}

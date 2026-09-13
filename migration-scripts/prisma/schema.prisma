@@ -1,0 +1,380 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// -------------------------------------------------------------
+// Enums
+// -------------------------------------------------------------
+
+enum UserRole {
+  ADMIN
+  EDITOR
+  SUBSCRIBER
+}
+
+enum Status {
+  ENABLED
+  DISABLED
+}
+
+enum CouponType {
+  CODE
+  LINK
+}
+
+enum HomepageSection {
+  FEATURED
+  SECONDARY
+  NEW
+  EXPIRING
+}
+
+// -------------------------------------------------------------
+// Core Relational Models
+// -------------------------------------------------------------
+
+model User {
+  id           String   @id @default(uuid())
+  name         String
+  email        String   @unique
+  description  String?
+  passwordHash String
+  role         UserRole @default(SUBSCRIBER)
+  verified     Boolean  @default(false)
+  status       Status   @default(ENABLED)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("users")
+}
+
+model Category {
+  id             String             @id @default(uuid())
+  title          String
+  slug           String             @unique
+  description    String?
+  icon           String?
+  showInMenu     Boolean            @default(true)
+  featured       Boolean            @default(false)
+  seoTitle       String?
+  seoDescription String?
+  status         Status             @default(ENABLED)
+  image          String             @default("/images/placeholder.png")
+  imagePublicId  String?
+  imageStoragePath String?
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  subcategories  Subcategory[]
+  stores         StoreCategory[]
+
+  @@map("categories")
+}
+
+model Subcategory {
+  id               String             @id @default(uuid())
+  title            String
+  slug             String             @unique
+  description      String?
+  parentCategoryId String
+  parentCategory   Category           @relation(fields: [parentCategoryId], references: [id], onDelete: Cascade)
+  seoTitle         String?
+  seoDescription   String?
+  status           Status             @default(ENABLED)
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+
+  stores           StoreSubcategory[]
+
+  @@map("subcategories")
+}
+
+model Store {
+  id               String             @id @default(uuid())
+  name             String
+  slug             String             @unique
+  logoPath         String             @default("/images/placeholder.png")
+  logoPublicId     String?
+  logoStoragePath  String?
+  description      String?
+  seoTitle         String?
+  seoDescription   String?
+  websiteUrl       String?
+  isActive         Boolean            @default(true)
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+
+  coupons          Coupon[]
+  categories       StoreCategory[]
+  subcategories    StoreSubcategory[]
+
+  @@map("stores")
+}
+
+model StoreCategory {
+  storeId    String
+  categoryId String
+  store      Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@id([storeId, categoryId])
+  @@map("store_categories")
+}
+
+model StoreSubcategory {
+  storeId       String
+  subcategoryId String
+  store         Store       @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  subcategory   Subcategory @relation(fields: [subcategoryId], references: [id], onDelete: Cascade)
+
+  @@id([storeId, subcategoryId])
+  @@map("store_subcategories")
+}
+
+model Coupon {
+  id               String          @id @default(uuid())
+  storeId          String
+  store            Store           @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  type             CouponType
+  title            String
+  description      String
+  code             String?
+  couponUrl        String?
+  discount         String
+  terms            String?
+  startsAt         DateTime?
+  expiresAt        DateTime?
+  isActive         Boolean         @default(true)
+  isFeatured       Boolean         @default(false)
+  homepageSection  HomepageSection @default(FEATURED)
+  image            String          @default("/images/placeholder.png")
+  imageStoragePath String?
+  labelTop         String?
+  labelBottom      String?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  @@map("coupons")
+}
+
+// -------------------------------------------------------------
+// Content & Media Models
+// -------------------------------------------------------------
+
+model Badge {
+  id               String   @id @default(uuid())
+  name             String
+  image            String   @default("/images/placeholder.png")
+  imagePublicId    String?
+  imageStoragePath String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@map("badges")
+}
+
+model BlogPost {
+  id               String   @id @default(uuid())
+  title            String
+  description      String
+  seoTitle         String?
+  seoDescription   String?
+  image            String   @default("/images/placeholder.png")
+  imagePublicId    String?
+  imageStoragePath String?
+  status           Status   @default(ENABLED)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@map("blog_posts")
+}
+
+model Slider {
+  id               String   @id @default(uuid())
+  title            String
+  description      String?
+  discount         String?
+  logo             String?  @default("/images/placeholder.png")
+  logoPublicId     String?
+  logoStoragePath  String?
+  link             String?  @default("#")
+  featured         Boolean  @default(false)
+  seoTitle         String?
+  seoDescription   String?
+  status           Status   @default(ENABLED)
+  image            String?  @default("/images/placeholder.png")
+  imagePublicId    String?
+  imageStoragePath String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@map("sliders")
+}
+
+model PromoBanner {
+  id               String   @id @default(uuid())
+  heading          String
+  description      String
+  image            String   @default("/images/placeholder.png")
+  imagePublicId    String?
+  imageStoragePath String?
+  status           Status   @default(ENABLED)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@map("promo_banners")
+}
+
+model Translation {
+  id        String   @id @default(uuid())
+  key       String   @unique
+  source    String
+  value     String   @default("")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("translations")
+}
+
+// -------------------------------------------------------------
+// Singletons & Configuration Models
+// -------------------------------------------------------------
+
+model Theme {
+  id                  String   @id @default(uuid())
+  primaryColor        String   @default("#1B2A4A")
+  secondaryColor      String   @default("#243B6A")
+  layoutHeader        String   @default("style-1")
+  mobileHeader        String   @default("style-1")
+  headerStyle         String   @default("style-1")
+  homeStyle           String   @default("home-1")
+  logo                String?  @default("")
+  transparentLogo     String?  @default("")
+  favicon             String?  @default("")
+  homeBackgroundImage String?  @default("")
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@map("themes")
+}
+
+model GlobalSeo {
+  id                 String   @id @default(uuid())
+  siteName           String?  @default("")
+  siteUrl            String?  @default("")
+  defaultTitle       String?  @default("")
+  titleTemplate      String?  @default("%s")
+  defaultDescription String?  @default("")
+  defaultKeywords    String[] @default([])
+  defaultOgImage     String?  @default("")
+  twitterHandle      String?  @default("")
+  favicon            String?  @default("")
+  socialLinks        Json?    @default("{}")
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@map("global_seo")
+}
+
+model SeoPage {
+  id           String   @id @default(uuid())
+  pageName     String
+  path         String   @unique
+  title        String?  @default("")
+  description  String?  @default("")
+  keywords     String[] @default([])
+  canonicalUrl String?  @default("")
+  robots       Json?    @default("{}")
+  openGraph    Json?    @default("{}")
+  twitter      Json?    @default("{}")
+  schema       Json?    @default("{}")
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("seo_pages")
+}
+
+model Redirect {
+  id         String   @id @default(uuid())
+  source     String   @unique
+  target     String
+  statusCode Int      @default(301)
+  isActive   Boolean  @default(true)
+  notes      String?  @default("")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@map("redirects")
+}
+
+model RobotsConfig {
+  id              String   @id @default(uuid())
+  allowCrawlers   Boolean  @default(true)
+  sitemapUrl      String?  @default("https://www.codicesconto.com/sitemap.xml")
+  disallowPaths   String[] @default(["/api/", "/dashboard/", "/account/"])
+  additionalRules String?  @default("")
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("robots_config")
+}
+
+model SitemapConfig {
+  id                   String   @id @default(uuid())
+  siteUrl              String   @default("https://www.codicesconto.com")
+  includeHome          Boolean  @default(true)
+  includeStores        Boolean  @default(true)
+  includeCategories    Boolean  @default(true)
+  includeSubcategories Boolean  @default(true)
+  includeBlog          Boolean  @default(true)
+  includeSeoPages      Boolean  @default(true)
+  isActive             Boolean  @default(true)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  @@map("sitemap_config")
+}
+
+model EmailTemplate {
+  id              String   @id @default(uuid())
+  templateKey     String   @unique
+  title           String
+  fromName        String?  @default("CodiceSconto")
+  sendAsPlainText Boolean  @default(false)
+  status          Status   @default(ENABLED)
+  subject         String
+  message         String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("email_templates")
+}
+
+model SiteSettings {
+  id                  String   @id @default(uuid())
+  maintenanceMode     Boolean  @default(false)
+  languageDirection   String   @default("ltr")
+  currencySymbol      String   @default("€")
+  currencyPosition    String   @default("before")
+  decimalSeparator    String   @default(".")
+  decimalNumber       Int      @default(2)
+  dateFormat          String   @default("DD/MM/YYYY")
+  timeZone            String   @default("Europe/Rome")
+  defaultPages        Json?    @default("{}")
+  companyInfo         Json?    @default("{}")
+  smtp                Json?    @default("{}")
+  googleAnalyticsCode String?  @default("")
+  googleRecaptchaKey  String?  @default("")
+  googleRecaptchaSecret String? @default("")
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@map("site_settings")
+}
