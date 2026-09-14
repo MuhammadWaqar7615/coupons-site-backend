@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth/auth";
 import { ROLES } from "@/lib/auth/roles";
 import { deleteFromSupabase } from "@/lib/supabase";
+import { appCache, CACHE_TAGS } from "@/lib/cache";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -32,26 +33,36 @@ function serializeCategory(c) {
 export async function GET(request, { params }) {
   try {
     const { id } = await params;
-    const category = await prisma.category.findFirst({
-      where: {
-        OR: [{ id }, { slug: id }],
-      },
-      include: {
-        subcategories: {
-          orderBy: { title: "asc" },
-        },
-        stores: {
+    const data = await appCache.wrap(
+      `category:${id}`,
+      async () => {
+        const category = await prisma.category.findFirst({
+          where: {
+            OR: [{ id }, { slug: id }],
+          },
           include: {
-            store: {
-              select: { id: true, name: true, slug: true, logoPath: true, isActive: true },
+            subcategories: {
+              orderBy: { title: "asc" },
+            },
+            stores: {
+              include: {
+                store: {
+                  select: { id: true, name: true, slug: true, logoPath: true, isActive: true },
+                },
+              },
             },
           },
-        },
-      },
-    });
+        });
 
-    if (!category) return NextResponse.json({ message: "Category not found" }, { status: 404 });
-    return NextResponse.json({ category: serializeCategory(category) });
+        if (!category) return null;
+        return { category: serializeCategory(category) };
+      },
+      3600,
+      CACHE_TAGS.CATEGORIES
+    );
+
+    if (!data) return NextResponse.json({ message: "Category not found" }, { status: 404 });
+    return NextResponse.json(data);
   } catch (error) {
     console.error("GET /api/categories/[id] Error:", error);
     return NextResponse.json({ message: "Internal Server Error" }, { status: 500 });
@@ -102,6 +113,7 @@ export async function PUT(request, { params }) {
       data: updateData,
     });
 
+    appCache.invalidateTag(CACHE_TAGS.CATEGORIES);
     return NextResponse.json({ category: serializeCategory(updated) });
   } catch (error) {
     console.error("PUT /api/categories/[id] Error:", error);
@@ -133,6 +145,7 @@ export async function DELETE(request, { params }) {
       where: { id: categoryToDelete.id },
     });
 
+    appCache.invalidateTag(CACHE_TAGS.CATEGORIES);
     return NextResponse.json({ message: "Category deleted successfully" });
   } catch (error) {
     console.error("DELETE /api/categories/[id] Error:", error);

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth/auth";
 import { ROLES } from "@/lib/auth/roles";
+import { appCache, CACHE_TAGS } from "@/lib/cache";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -31,16 +32,25 @@ function isValidTarget(value) {
 
 export async function GET() {
   try {
-    const redirects = await prisma.redirect.findMany({
-      orderBy: { source: "asc" },
-    });
+    const data = await appCache.wrap(
+      "seo:redirects:all",
+      async () => {
+        const redirects = await prisma.redirect.findMany({
+          orderBy: { source: "asc" },
+        });
 
-    return NextResponse.json({
-      redirects: redirects.map((redirect) => ({
-        ...redirect,
-        _id: redirect.id,
-      })),
-    });
+        return {
+          redirects: redirects.map((redirect) => ({
+            ...redirect,
+            _id: redirect.id,
+          })),
+        };
+      },
+      300,
+      CACHE_TAGS.SEO
+    );
+
+    return NextResponse.json(data);
   } catch (error) {
     console.error("GET /api/seo/redirects Error:", error);
     return NextResponse.json({ message: "Internal Server Error" }, { status: 500 });
@@ -97,6 +107,8 @@ export async function POST(request) {
         notes: String(body.notes || "").trim(),
       },
     });
+
+    appCache.invalidateTag(CACHE_TAGS.SEO);
 
     return NextResponse.json({
       message: "Redirect created successfully.",

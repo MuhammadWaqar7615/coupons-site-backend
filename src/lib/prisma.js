@@ -36,5 +36,27 @@ if (process.env.NODE_ENV !== "production") {
   globalForPrisma.prisma = prisma;
 }
 
+// Lightweight background keep-alive to keep remote PostgreSQL pool connection warm
+// Prevents the 2+ second TCP/TLS reconnect penalty after idle periods
+if (!globalForPrisma.__prismaHeartbeatStarted) {
+  globalForPrisma.__prismaHeartbeatStarted = true;
+  const heartbeatInterval = setInterval(async () => {
+    try {
+      await prisma.$queryRaw`SELECT 1;`;
+    } catch {
+      // Ignore background heartbeat hiccups
+    }
+  }, 45 * 1000);
+  if (heartbeatInterval?.unref) {
+    heartbeatInterval.unref();
+  }
+
+  // Trigger background proactive cache warming
+  import("./warmup.js")
+    .then(({ triggerWarmup }) => triggerWarmup())
+    .catch(() => {});
+}
+
 export default prisma;
+
 

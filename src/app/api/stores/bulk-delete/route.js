@@ -4,6 +4,7 @@ import { requireRole } from "@/lib/auth/auth";
 import { ROLES } from "@/lib/auth/roles";
 import { handleAuthError } from "@/lib/api-errors";
 import { deleteFromSupabase } from "@/lib/supabase";
+import { appCache, CACHE_TAGS } from "@/lib/cache";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -33,6 +34,9 @@ export async function POST(request) {
     const result = await prisma.store.deleteMany({
       where: { id: { in: data.storeIds } },
     });
+
+    appCache.invalidateTag(CACHE_TAGS.STORES);
+    appCache.invalidateTag(CACHE_TAGS.COUPONS);
 
     return NextResponse.json(
       { message: `Successfully deleted ${result.count} stores.`, count: result.count },

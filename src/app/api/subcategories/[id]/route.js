@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth/auth";
 import { ROLES } from "@/lib/auth/roles";
 import { serializeSubcategory } from "@/lib/serializer";
+import { appCache, CACHE_TAGS } from "@/lib/cache";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -10,17 +11,27 @@ export const dynamic = "force-dynamic";
 export async function GET(request, { params }) {
   try {
     const { id } = await params;
-    const subcategory = await prisma.subcategory.findFirst({
-      where: {
-        OR: [{ id }, { slug: id }],
-      },
-      include: {
-        parentCategory: { select: { id: true, title: true, slug: true } },
-      },
-    });
+    const data = await appCache.wrap(
+      `subcategory:${id}`,
+      async () => {
+        const subcategory = await prisma.subcategory.findFirst({
+          where: {
+            OR: [{ id }, { slug: id }],
+          },
+          include: {
+            parentCategory: { select: { id: true, title: true, slug: true } },
+          },
+        });
 
-    if (!subcategory) return NextResponse.json({ message: "Subcategory not found" }, { status: 404 });
-    return NextResponse.json({ subcategory: serializeSubcategory(subcategory) });
+        if (!subcategory) return null;
+        return { subcategory: serializeSubcategory(subcategory) };
+      },
+      3600,
+      CACHE_TAGS.SUBCATEGORIES
+    );
+
+    if (!data) return NextResponse.json({ message: "Subcategory not found" }, { status: 404 });
+    return NextResponse.json(data);
   } catch (error) {
     console.error("GET /api/subcategories/[id] Error:", error);
     return NextResponse.json({ message: "Internal Server Error" }, { status: 500 });
@@ -71,6 +82,7 @@ export async function PUT(request, { params }) {
       },
     });
 
+    appCache.invalidateTag(CACHE_TAGS.SUBCATEGORIES);
     return NextResponse.json({ subcategory: serializeSubcategory(subcategory) });
   } catch (error) {
     console.error("PUT /api/subcategories/[id] Error:", error);
@@ -97,6 +109,7 @@ export async function DELETE(request, { params }) {
       where: { id: subcategory.id },
     });
 
+    appCache.invalidateTag(CACHE_TAGS.SUBCATEGORIES);
     return NextResponse.json({ message: "Subcategory deleted successfully" });
   } catch (error) {
     console.error("DELETE /api/subcategories/[id] Error:", error);

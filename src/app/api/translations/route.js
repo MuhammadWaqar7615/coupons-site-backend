@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth/auth";
 import { ROLES } from "@/lib/auth/roles";
 import { translationDefaults } from "@/lib/translations";
+import { appCache, CACHE_TAGS } from "@/lib/cache";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -11,15 +12,22 @@ export async function GET() {
   try {
     await requireRole([ROLES.ADMIN, ROLES.ADMINISTRATION]);
 
-    const saved = await prisma.translation.findMany({
-      orderBy: { key: "asc" },
-    });
-    const savedByKey = new Map(saved.map((item) => [item.key, item]));
-    const translations = translationDefaults.map(([key, source]) => ({
-      key,
-      source,
-      value: savedByKey.get(key)?.value || "",
-    }));
+    const translations = await appCache.wrap(
+      "translations:all",
+      async () => {
+        const saved = await prisma.translation.findMany({
+          orderBy: { key: "asc" },
+        });
+        const savedByKey = new Map(saved.map((item) => [item.key, item]));
+        return translationDefaults.map(([key, source]) => ({
+          key,
+          source,
+          value: savedByKey.get(key)?.value || "",
+        }));
+      },
+      300,
+      [CACHE_TAGS.TRANSLATIONS]
+    );
 
     return NextResponse.json({ translations });
   } catch (error) {
@@ -63,6 +71,8 @@ export async function PUT(request) {
         )
       );
     }
+
+    appCache.invalidateTag(CACHE_TAGS.TRANSLATIONS);
 
     return NextResponse.json({ message: "Translations saved successfully." });
   } catch (error) {

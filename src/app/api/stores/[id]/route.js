@@ -5,6 +5,7 @@ import { ROLES } from "@/lib/auth/roles";
 import { handleAuthError } from "@/lib/api-errors";
 import { deleteFromSupabase } from "@/lib/supabase";
 import { serializeStore } from "@/lib/serializer";
+import { appCache, CACHE_TAGS } from "@/lib/cache";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -13,25 +14,35 @@ export async function GET(request, { params }) {
   try {
     const { id } = await params;
 
-    const store = await prisma.store.findFirst({
-      where: {
-        OR: [{ id }, { slug: id }],
-      },
-      include: {
-        categories: { include: { category: true } },
-        subcategories: { include: { subcategory: true } },
-        coupons: {
-          where: { isActive: true },
-          orderBy: [{ isFeatured: "desc" }, { createdAt: "desc" }],
-        },
-      },
-    });
+    const data = await appCache.wrap(
+      `store:${id}`,
+      async () => {
+        const store = await prisma.store.findFirst({
+          where: {
+            OR: [{ id }, { slug: id }],
+          },
+          include: {
+            categories: { include: { category: true } },
+            subcategories: { include: { subcategory: true } },
+            coupons: {
+              where: { isActive: true },
+              orderBy: [{ isFeatured: "desc" }, { createdAt: "desc" }],
+            },
+          },
+        });
 
-    if (!store) {
+        if (!store) return null;
+        return { store: serializeStore(store) };
+      },
+      3600,
+      CACHE_TAGS.STORES
+    );
+
+    if (!data) {
       return NextResponse.json({ message: "Store not found" }, { status: 404 });
     }
 
-    return NextResponse.json({ store: serializeStore(store) }, { status: 200 });
+    return NextResponse.json(data, { status: 200 });
   } catch (error) {
     console.error("GET /api/stores/[id] Error:", error);
     return NextResponse.json({ message: "Internal Server Error" }, { status: 500 });
@@ -122,6 +133,8 @@ export async function PUT(request, { params }) {
       }
     );
 
+    appCache.invalidateTag(CACHE_TAGS.STORES);
+    appCache.invalidateTag(CACHE_TAGS.COUPONS);
     return NextResponse.json({ store: serializeStore(updatedStore) }, { status: 200 });
   } catch (error) {
     const authResponse = handleAuthError(error);
@@ -155,6 +168,8 @@ export async function DELETE(request, { params }) {
       where: { id },
     });
 
+    appCache.invalidateTag(CACHE_TAGS.STORES);
+    appCache.invalidateTag(CACHE_TAGS.COUPONS);
     return NextResponse.json({ message: "Store deleted successfully" }, { status: 200 });
   } catch (error) {
     const authResponse = handleAuthError(error);

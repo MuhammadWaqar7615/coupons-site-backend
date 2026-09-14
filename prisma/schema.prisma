@@ -1,5 +1,6 @@
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["relationJoins"]
 }
 
 datasource db {
@@ -42,6 +43,8 @@ model Category {
   stores           StoreCategory[]
   subcategories    Subcategory[]
 
+  @@index([status, showInMenu])
+  @@index([featured])
   @@map("categories")
 }
 
@@ -59,6 +62,8 @@ model Subcategory {
   stores           StoreSubcategory[]
   parentCategory   Category           @relation(fields: [parentCategoryId], references: [id], onDelete: Cascade)
 
+  @@index([parentCategoryId])
+  @@index([status])
   @@map("subcategories")
 }
 
@@ -80,6 +85,8 @@ model Store {
   categories      StoreCategory[]
   subcategories   StoreSubcategory[]
 
+  @@index([isActive])
+  @@index([name])
   @@map("stores")
 }
 
@@ -90,6 +97,7 @@ model StoreCategory {
   store      Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
 
   @@id([storeId, categoryId])
+  @@index([categoryId])
   @@map("store_categories")
 }
 
@@ -100,6 +108,7 @@ model StoreSubcategory {
   subcategory   Subcategory @relation(fields: [subcategoryId], references: [id], onDelete: Cascade)
 
   @@id([storeId, subcategoryId])
+  @@index([subcategoryId])
   @@map("store_subcategories")
 }
 
@@ -126,6 +135,10 @@ model Coupon {
   updatedAt        DateTime        @updatedAt
   store            Store           @relation(fields: [storeId], references: [id], onDelete: Cascade)
 
+  @@index([storeId])
+  @@index([isActive, isFeatured])
+  @@index([startsAt, expiresAt])
+  @@index([homepageSection])
   @@map("coupons")
 }
 
@@ -138,6 +151,7 @@ model Badge {
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
+  @@index([name])
   @@map("badges")
 }
 
@@ -154,6 +168,7 @@ model BlogPost {
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
+  @@index([status, createdAt])
   @@map("blog_posts")
 }
 
@@ -176,6 +191,7 @@ model Slider {
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
+  @@index([status, featured])
   @@map("sliders")
 }
 
@@ -190,6 +206,7 @@ model PromoBanner {
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
+  @@index([status, createdAt])
   @@map("promo_banners")
 }
 

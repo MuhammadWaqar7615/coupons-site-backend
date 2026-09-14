@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth/auth";
 import { ROLES } from "@/lib/auth/roles";
 import { serializeSubcategory } from "@/lib/serializer";
+import { appCache, CACHE_TAGS } from "@/lib/cache";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -12,26 +13,36 @@ export async function GET(request) {
     const { searchParams } = new URL(request.url);
     const status = searchParams.get("status");
     const parentCategory = searchParams.get("parentCategory") || searchParams.get("categoryId");
-    const where = {};
 
-    if (["enabled", "disabled"].includes(status?.toLowerCase())) {
-      where.status = status.toUpperCase();
-    }
-    if (parentCategory) {
-      where.parentCategoryId = parentCategory;
-    }
+    const cacheKey = `subcategories:${status || "all"}:${parentCategory || "all"}`;
+    const data = await appCache.wrap(
+      cacheKey,
+      async () => {
+        const where = {};
+        if (["enabled", "disabled"].includes(status?.toLowerCase())) {
+          where.status = status.toUpperCase();
+        }
+        if (parentCategory) {
+          where.parentCategoryId = parentCategory;
+        }
 
-    const subcategories = await prisma.subcategory.findMany({
-      where,
-      include: {
-        parentCategory: { select: { id: true, title: true, slug: true } },
+        const subcategories = await prisma.subcategory.findMany({
+          where,
+          include: {
+            parentCategory: { select: { id: true, title: true, slug: true } },
+          },
+          orderBy: { title: "asc" },
+        });
+
+        return {
+          subcategories: subcategories.map(serializeSubcategory),
+        };
       },
-      orderBy: { title: "asc" },
-    });
+      3600,
+      CACHE_TAGS.SUBCATEGORIES
+    );
 
-    return NextResponse.json({
-      subcategories: subcategories.map(serializeSubcategory),
-    });
+    return NextResponse.json(data);
   } catch (error) {
     console.error("GET /api/subcategories Error:", error);
     return NextResponse.json({ message: "Internal Server Error" }, { status: 500 });
@@ -83,6 +94,7 @@ export async function POST(request) {
       },
     });
 
+    appCache.invalidateTag(CACHE_TAGS.SUBCATEGORIES);
     return NextResponse.json({ subcategory: serializeSubcategory(subcategory) }, { status: 201 });
   } catch (error) {
     console.error("POST /api/subcategories Error:", error);

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth/auth";
 import { ROLES } from "@/lib/auth/roles";
+import { appCache, CACHE_TAGS } from "@/lib/cache";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -23,15 +24,23 @@ export async function GET() {
   try {
     await requireRole([ROLES.ADMIN, ROLES.ADMINISTRATION]);
 
-    const theme = await prisma.theme.findFirst();
-
-    return NextResponse.json({
-      theme: {
-        ...defaults,
-        ...(theme || {}),
-        _id: theme?.id,
+    const data = await appCache.wrap(
+      "theme",
+      async () => {
+        const theme = await prisma.theme.findFirst();
+        return {
+          theme: {
+            ...defaults,
+            ...(theme || {}),
+            _id: theme?.id,
+          },
+        };
       },
-    });
+      3600,
+      CACHE_TAGS.THEME
+    );
+
+    return NextResponse.json(data);
   } catch (error) {
     console.error("GET /api/theme Error:", error);
     if (error.message === "Unauthorized" || error.message === "Forbidden") {
@@ -75,6 +84,8 @@ export async function PUT(request) {
         data: payload,
       });
     }
+
+    appCache.invalidateTag(CACHE_TAGS.THEME);
 
     return NextResponse.json({
       message: "Theme settings saved successfully.",

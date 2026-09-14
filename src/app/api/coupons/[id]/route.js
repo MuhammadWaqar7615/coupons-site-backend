@@ -4,6 +4,7 @@ import { requireRole } from "@/lib/auth/auth";
 import { ROLES } from "@/lib/auth/roles";
 import { deleteFromSupabase } from "@/lib/supabase";
 import { serializeCoupon } from "@/lib/serializer";
+import { appCache, CACHE_TAGS } from "@/lib/cache";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -13,21 +14,32 @@ export async function GET(request, { params }) {
   try {
     const { id } = await params;
 
-    const coupon = await prisma.coupon.findUnique({
-      where: { id },
-      include: {
-        store: {
-          select: { id: true, name: true, slug: true, logoPath: true, websiteUrl: true },
-        },
-      },
-    });
+    const data = await appCache.wrap(
+      `coupon:${id}`,
+      async () => {
+        const coupon = await prisma.coupon.findUnique({
+          where: { id },
+          include: {
+            store: {
+              select: { id: true, name: true, slug: true, logoPath: true, websiteUrl: true },
+            },
+          },
+        });
 
-    if (!coupon) {
+        if (!coupon) return null;
+
+        const serialized = serializeCoupon(coupon);
+        return { success: true, data: serialized, coupon: serialized };
+      },
+      3600,
+      CACHE_TAGS.COUPONS
+    );
+
+    if (!data) {
       return NextResponse.json({ success: false, error: "Coupon not found" }, { status: 404 });
     }
 
-    const serialized = serializeCoupon(coupon);
-    return NextResponse.json({ success: true, data: serialized, coupon: serialized });
+    return NextResponse.json(data);
   } catch (error) {
     console.error("Error fetching coupon:", error);
     return NextResponse.json({ success: false, error: "Server Error" }, { status: 500 });
@@ -93,6 +105,8 @@ export async function PUT(request, { params }) {
     });
 
     const serialized = serializeCoupon(updatedCoupon);
+    appCache.invalidateTag(CACHE_TAGS.COUPONS);
+    appCache.invalidateTag(CACHE_TAGS.STORES);
     return NextResponse.json({ success: true, data: serialized, coupon: serialized });
   } catch (error) {
     console.error("Error updating coupon:", error);
@@ -125,6 +139,8 @@ export async function DELETE(request, { params }) {
       where: { id },
     });
 
+    appCache.invalidateTag(CACHE_TAGS.COUPONS);
+    appCache.invalidateTag(CACHE_TAGS.STORES);
     return NextResponse.json({ success: true, message: "Coupon deleted successfully" });
   } catch (error) {
     console.error("Error deleting coupon:", error);

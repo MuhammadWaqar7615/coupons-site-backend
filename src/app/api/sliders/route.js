@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth/auth";
 import { ROLES } from "@/lib/auth/roles";
 import { serializeSlider } from "@/lib/serializer";
+import { appCache, CACHE_TAGS } from "@/lib/cache";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -12,21 +13,31 @@ export async function GET(request) {
     const { searchParams } = new URL(request.url);
     const status = searchParams.get("status");
     const featured = searchParams.get("featured");
-    const where = {};
 
-    if (["enabled", "disabled"].includes(status?.toLowerCase())) {
-      where.status = status.toUpperCase();
-    }
-    if (featured === "true" || featured === "false") {
-      where.featured = featured === "true";
-    }
+    const cacheKey = `sliders:${status || "all"}:${featured || "all"}`;
+    const data = await appCache.wrap(
+      cacheKey,
+      async () => {
+        const where = {};
+        if (["enabled", "disabled"].includes(status?.toLowerCase())) {
+          where.status = status.toUpperCase();
+        }
+        if (featured === "true" || featured === "false") {
+          where.featured = featured === "true";
+        }
 
-    const sliders = await prisma.slider.findMany({
-      where,
-      orderBy: [{ featured: "desc" }, { createdAt: "desc" }],
-    });
+        const sliders = await prisma.slider.findMany({
+          where,
+          orderBy: [{ featured: "desc" }, { createdAt: "desc" }],
+        });
 
-    return NextResponse.json({ sliders: sliders.map(serializeSlider) });
+        return { sliders: sliders.map(serializeSlider) };
+      },
+      3600,
+      CACHE_TAGS.SLIDERS
+    );
+
+    return NextResponse.json(data);
   } catch (error) {
     console.error("GET /api/sliders Error:", error);
     return NextResponse.json({ message: "Internal Server Error" }, { status: 500 });
@@ -61,6 +72,7 @@ export async function POST(request) {
       },
     });
 
+    appCache.invalidateTag(CACHE_TAGS.SLIDERS);
     return NextResponse.json({ slider: serializeSlider(slider) }, { status: 201 });
   } catch (error) {
     console.error("POST /api/sliders Error:", error);

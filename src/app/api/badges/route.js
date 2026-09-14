@@ -3,18 +3,26 @@ import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth/auth";
 import { ROLES } from "@/lib/auth/roles";
 import { serializeBadge } from "@/lib/serializer";
+import { appCache, CACHE_TAGS } from "@/lib/cache";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
-    const badges = await prisma.badge.findMany({
-      orderBy: { name: "asc" },
-    });
-    return NextResponse.json({
-      badges: badges.map(serializeBadge),
-    });
+    const data = await appCache.wrap(
+      "badges",
+      async () => {
+        const badges = await prisma.badge.findMany({
+          orderBy: { name: "asc" },
+        });
+        return { badges: badges.map(serializeBadge) };
+      },
+      3600,
+      CACHE_TAGS.BADGES
+    );
+
+    return NextResponse.json(data);
   } catch (error) {
     console.error("GET /api/badges Error:", error);
     return NextResponse.json({ message: "Internal Server Error" }, { status: 500 });
@@ -39,6 +47,7 @@ export async function POST(request) {
       },
     });
 
+    appCache.invalidateTag(CACHE_TAGS.BADGES);
     return NextResponse.json({ badge: serializeBadge(badge) }, { status: 201 });
   } catch (error) {
     console.error("POST /api/badges Error:", error);

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth/auth";
 import { ROLES } from "@/lib/auth/roles";
+import { appCache, CACHE_TAGS } from "@/lib/cache";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -35,41 +36,51 @@ export async function GET(request) {
     const showInMenu = searchParams.get("showInMenu");
     const featured = searchParams.get("featured");
     const slug = searchParams.get("slug");
-    const where = {};
 
-    if (["enabled", "disabled"].includes(status?.toLowerCase())) {
-      where.status = status.toUpperCase();
-    }
-    if (showInMenu === "true" || showInMenu === "false") {
-      where.showInMenu = showInMenu === "true";
-    }
-    if (featured === "true" || featured === "false") {
-      where.featured = featured === "true";
-    }
-    if (slug) {
-      where.slug = slug;
-    }
+    const cacheKey = `categories:${status || "all"}:${showInMenu || "all"}:${featured || "all"}:${slug || "all"}`;
+    const data = await appCache.wrap(
+      cacheKey,
+      async () => {
+        const where = {};
+        if (["enabled", "disabled"].includes(status?.toLowerCase())) {
+          where.status = status.toUpperCase();
+        }
+        if (showInMenu === "true" || showInMenu === "false") {
+          where.showInMenu = showInMenu === "true";
+        }
+        if (featured === "true" || featured === "false") {
+          where.featured = featured === "true";
+        }
+        if (slug) {
+          where.slug = slug;
+        }
 
-    const categories = await prisma.category.findMany({
-      where,
-      orderBy: { title: "asc" },
-      include: {
-        subcategories: {
+        const categories = await prisma.category.findMany({
+          where,
           orderBy: { title: "asc" },
-        },
-        stores: {
           include: {
-            store: {
-              select: { id: true, name: true, slug: true, logoPath: true, isActive: true },
+            subcategories: {
+              orderBy: { title: "asc" },
+            },
+            stores: {
+              include: {
+                store: {
+                  select: { id: true, name: true, slug: true, logoPath: true, isActive: true },
+                },
+              },
             },
           },
-        },
-      },
-    });
+        });
 
-    return NextResponse.json({
-      categories: categories.map(serializeCategory),
-    });
+        return {
+          categories: categories.map(serializeCategory),
+        };
+      },
+      3600,
+      CACHE_TAGS.CATEGORIES
+    );
+
+    return NextResponse.json(data);
   } catch (error) {
     console.error("GET /api/categories Error:", error);
     return NextResponse.json({ message: "Internal Server Error" }, { status: 500 });
@@ -111,6 +122,7 @@ export async function POST(request) {
       },
     });
 
+    appCache.invalidateTag(CACHE_TAGS.CATEGORIES);
     return NextResponse.json({ category: serializeCategory(category) }, { status: 201 });
   } catch (error) {
     console.error("POST /api/categories Error:", error);

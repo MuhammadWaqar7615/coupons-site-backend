@@ -4,6 +4,7 @@ import { requireRole } from "@/lib/auth/auth";
 import { ROLES } from "@/lib/auth/roles";
 import { deleteFromSupabase } from "@/lib/supabase";
 import { serializePost } from "@/lib/serializer";
+import { appCache, CACHE_TAGS } from "@/lib/cache";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -11,13 +12,23 @@ export const dynamic = "force-dynamic";
 export async function GET(request, { params }) {
   try {
     const { id } = await params;
-    const post = await prisma.blogPost.findFirst({
-      where: {
-        OR: [{ id }, { title: id }],
+    const data = await appCache.wrap(
+      `post:${id}`,
+      async () => {
+        const post = await prisma.blogPost.findFirst({
+          where: {
+            OR: [{ id }, { title: id }],
+          },
+        });
+        if (!post) return null;
+        return { post: serializePost(post) };
       },
-    });
-    if (!post) return NextResponse.json({ message: "Blog post not found" }, { status: 404 });
-    return NextResponse.json({ post: serializePost(post) });
+      3600,
+      CACHE_TAGS.BLOG
+    );
+
+    if (!data) return NextResponse.json({ message: "Blog post not found" }, { status: 404 });
+    return NextResponse.json(data);
   } catch (error) {
     console.error("GET /api/blog/[id] Error:", error);
     return NextResponse.json({ message: "Internal Server Error" }, { status: 500 });
@@ -60,6 +71,7 @@ export async function PUT(request, { params }) {
       },
     });
 
+    appCache.invalidateTag(CACHE_TAGS.BLOG);
     return NextResponse.json({ post: serializePost(post) });
   } catch (error) {
     console.error("PUT /api/blog/[id] Error:", error);
@@ -91,6 +103,7 @@ export async function DELETE(request, { params }) {
       where: { id: postToDelete.id },
     });
 
+    appCache.invalidateTag(CACHE_TAGS.BLOG);
     return NextResponse.json({ message: "Blog post deleted successfully" });
   } catch (error) {
     console.error("DELETE /api/blog/[id] Error:", error);

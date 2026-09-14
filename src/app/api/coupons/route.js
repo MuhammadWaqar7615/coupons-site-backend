@@ -4,6 +4,7 @@ import { requireRole } from "@/lib/auth/auth";
 import { ROLES } from "@/lib/auth/roles";
 import { handleAuthError } from "@/lib/api-errors";
 import { serializeCoupon } from "@/lib/serializer";
+import { appCache, CACHE_TAGS } from "@/lib/cache";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -15,25 +16,35 @@ export async function GET(request) {
     const { searchParams } = new URL(request.url);
     const storeId = searchParams.get("storeId");
 
-    let where = {};
-    if (storeId) {
-      where.storeId = storeId;
-    }
+    const cacheKey = `coupons:${storeId || "all"}`;
+    const data = await appCache.wrap(
+      cacheKey,
+      async () => {
+        let where = {};
+        if (storeId) {
+          where.storeId = storeId;
+        }
 
-    const coupons = await prisma.coupon.findMany({
-      where,
-      include: {
-        store: {
-          select: { id: true, name: true, slug: true, logoPath: true },
-        },
+        const coupons = await prisma.coupon.findMany({
+          where,
+          include: {
+            store: {
+              select: { id: true, name: true, slug: true, logoPath: true },
+            },
+          },
+          orderBy: { createdAt: "desc" },
+        });
+
+        return {
+          success: true,
+          data: coupons.map((c) => serializeCoupon(c)),
+        };
       },
-      orderBy: { createdAt: "desc" },
-    });
+      3600,
+      CACHE_TAGS.COUPONS
+    );
 
-    return NextResponse.json({
-      success: true,
-      data: coupons.map((c) => serializeCoupon(c)),
-    });
+    return NextResponse.json(data);
   } catch (error) {
     const authResponse = handleAuthError(error);
     if (authResponse) return authResponse;
@@ -89,6 +100,9 @@ export async function POST(request) {
         },
       },
     });
+
+    appCache.invalidateTag(CACHE_TAGS.COUPONS);
+    appCache.invalidateTag(CACHE_TAGS.STORES);
 
     return NextResponse.json(
       { success: true, data: serializeCoupon(newCoupon) },

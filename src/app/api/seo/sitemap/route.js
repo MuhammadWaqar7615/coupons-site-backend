@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth/auth";
 import { ROLES } from "@/lib/auth/roles";
+import { appCache, CACHE_TAGS } from "@/lib/cache";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -27,8 +28,15 @@ export async function GET(request) {
     const format = searchParams.get("format");
     const accept = request.headers.get("accept") || "";
 
-    const dbConfig = await prisma.sitemapConfig.findFirst();
-    const config = dbConfig || defaults;
+    const config = await appCache.wrap(
+      "seo:sitemap:config",
+      async () => {
+        const dbConfig = await prisma.sitemapConfig.findFirst();
+        return dbConfig || defaults;
+      },
+      300,
+      CACHE_TAGS.SEO
+    );
 
     const wantsXml = format === "xml" || (accept.includes("application/xml") && !accept.includes("application/json"));
 
@@ -147,6 +155,9 @@ export async function POST(request) {
         data: payload,
       });
     }
+
+    appCache.invalidateTag(CACHE_TAGS.SEO);
+    appCache.invalidateTag(CACHE_TAGS.SITEMAP);
 
     return NextResponse.json({
       message: "Sitemap configuration saved successfully.",

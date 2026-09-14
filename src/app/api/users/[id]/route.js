@@ -4,6 +4,7 @@ import { hashPassword } from "@/lib/auth/password";
 import { requireRole } from "@/lib/auth/auth";
 import { ROLES } from "@/lib/auth/roles";
 import { serializeUser } from "@/lib/serializer";
+import { appCache, CACHE_TAGS } from "@/lib/cache";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -20,11 +21,20 @@ export async function GET(request, { params }) {
     await requireRole([ROLES.ADMIN, ROLES.ADMINISTRATION]);
     const { id } = await params;
 
-    const user = await prisma.user.findUnique({
-      where: { id },
-    });
+    const user = await appCache.wrap(
+      `user:${id}`,
+      async () => {
+        const item = await prisma.user.findUnique({
+          where: { id },
+        });
+        return item ? serializeUser(item) : null;
+      },
+      300,
+      CACHE_TAGS.USERS
+    );
+
     if (!user) return NextResponse.json({ message: "User not found" }, { status: 404 });
-    return NextResponse.json({ user: serializeUser(user) });
+    return NextResponse.json({ user });
   } catch (error) {
     console.error("GET /api/users/[id] Error:", error);
     if (error.message === "Unauthorized" || error.message === "Forbidden") {
@@ -72,6 +82,8 @@ export async function PUT(request, { params }) {
       data: updateData,
     });
 
+    appCache.invalidateTag(CACHE_TAGS.USERS);
+
     return NextResponse.json({ user: serializeUser(updatedUser) });
   } catch (error) {
     console.error("PUT /api/users/[id] Error:", error);
@@ -95,6 +107,8 @@ export async function DELETE(request, { params }) {
     await prisma.user.delete({
       where: { id },
     });
+
+    appCache.invalidateTag(CACHE_TAGS.USERS);
 
     return NextResponse.json({ message: "User deleted successfully" });
   } catch (error) {

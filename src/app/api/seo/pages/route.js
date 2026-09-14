@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth/auth";
 import { ROLES } from "@/lib/auth/roles";
+import { appCache, CACHE_TAGS } from "@/lib/cache";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -30,16 +31,25 @@ function isValidUrl(value) {
 
 export async function GET() {
   try {
-    const pages = await prisma.seoPage.findMany({
-      orderBy: { pageName: "asc" },
-    });
+    const data = await appCache.wrap(
+      "seo:pages:all",
+      async () => {
+        const pages = await prisma.seoPage.findMany({
+          orderBy: { pageName: "asc" },
+        });
 
-    return NextResponse.json({
-      pages: pages.map((page) => ({
-        ...page,
-        _id: page.id,
-      })),
-    });
+        return {
+          pages: pages.map((page) => ({
+            ...page,
+            _id: page.id,
+          })),
+        };
+      },
+      300,
+      CACHE_TAGS.SEO
+    );
+
+    return NextResponse.json(data);
   } catch (error) {
     console.error("GET /api/seo/pages Error:", error);
     return NextResponse.json({ message: "Internal Server Error" }, { status: 500 });
@@ -113,6 +123,9 @@ export async function POST(request) {
     const page = await prisma.seoPage.create({
       data: payload,
     });
+
+    appCache.invalidateTag(CACHE_TAGS.SEO);
+    appCache.invalidateTag(CACHE_TAGS.SITEMAP);
 
     return NextResponse.json({
       message: "SEO page created successfully.",

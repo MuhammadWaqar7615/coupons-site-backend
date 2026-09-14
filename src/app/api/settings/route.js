@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth/auth";
 import { ROLES } from "@/lib/auth/roles";
+import { appCache, CACHE_TAGS } from "@/lib/cache";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -27,18 +28,26 @@ export async function GET() {
   try {
     await requireRole([ROLES.ADMIN, ROLES.ADMINISTRATION]);
 
-    const settings = await prisma.siteSettings.findFirst();
-
-    return NextResponse.json({
-      settings: {
-        ...defaults,
-        ...(settings || {}),
-        _id: settings?.id,
-        defaultPages: { ...defaults.defaultPages, ...(settings?.defaultPages || {}) },
-        companyInfo: { ...defaults.companyInfo, ...(settings?.companyInfo || {}) },
-        smtp: { ...defaults.smtp, ...(settings?.smtp || {}) },
+    const data = await appCache.wrap(
+      "site_settings",
+      async () => {
+        const settings = await prisma.siteSettings.findFirst();
+        return {
+          settings: {
+            ...defaults,
+            ...(settings || {}),
+            _id: settings?.id,
+            defaultPages: { ...defaults.defaultPages, ...(settings?.defaultPages || {}) },
+            companyInfo: { ...defaults.companyInfo, ...(settings?.companyInfo || {}) },
+            smtp: { ...defaults.smtp, ...(settings?.smtp || {}) },
+          },
+        };
       },
-    });
+      3600,
+      CACHE_TAGS.SETTINGS
+    );
+
+    return NextResponse.json(data);
   } catch (error) {
     console.error("GET /api/settings Error:", error);
     if (error.message === "Unauthorized" || error.message === "Forbidden") {
@@ -92,6 +101,8 @@ export async function PUT(request) {
     }
 
     const safeSmtp = { ...(settings.smtp || {}), password: "" };
+
+    appCache.invalidateTag(CACHE_TAGS.SETTINGS);
 
     return NextResponse.json({
       message: "Site settings saved successfully.",

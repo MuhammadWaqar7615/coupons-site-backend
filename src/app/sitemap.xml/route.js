@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { appCache, CACHE_TAGS } from "@/lib/cache";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -23,113 +24,117 @@ const defaults = {
 
 export async function GET() {
   try {
-    const dbConfig = await prisma.sitemapConfig.findFirst();
-    const config = dbConfig || defaults;
+    const xml = await appCache.wrap(
+      "sitemap_xml",
+      async () => {
+        const dbConfig = await prisma.sitemapConfig.findFirst();
+        const config = dbConfig || defaults;
 
-    if (!config.isActive) {
-      return new NextResponse(
-        `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n</urlset>`,
-        {
-          headers: {
-            "Content-Type": "application/xml; charset=utf-8",
-          },
+        if (!config.isActive) {
+          return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n</urlset>`;
         }
-      );
-    }
 
-    const baseUrl = config.siteUrl.replace(/\/$/, "");
-    const entries = [];
+        const baseUrl = config.siteUrl.replace(/\/$/, "");
+        const entries = [];
 
-    if (config.includeHome) {
-      entries.push(buildUrlEntry(`${baseUrl}/`, new Date().toISOString()));
-    }
+        if (config.includeHome) {
+          entries.push(buildUrlEntry(`${baseUrl}/`, new Date().toISOString()));
+        }
 
-    if (config.includeStores) {
-      const stores = await prisma.store.findMany({
-        where: { isActive: true },
-        select: { slug: true, updatedAt: true },
-      });
-      stores.forEach((store) =>
-        entries.push(
-          buildUrlEntry(
-            `${baseUrl}/store/${store.slug}`,
-            store.updatedAt ? new Date(store.updatedAt).toISOString() : undefined
-          )
-        )
-      );
-    }
+        // Parallelize all queries across tables
+        const [stores, categories, subcategories, posts, seoPages] = await Promise.all([
+          config.includeStores
+            ? prisma.store.findMany({
+                where: { isActive: true },
+                select: { slug: true, updatedAt: true },
+              })
+            : Promise.resolve([]),
+          config.includeCategories
+            ? prisma.category.findMany({
+                where: { status: "ENABLED" },
+                select: { slug: true, updatedAt: true },
+              })
+            : Promise.resolve([]),
+          config.includeSubcategories
+            ? prisma.subcategory.findMany({
+                where: { status: "ENABLED" },
+                include: {
+                  parentCategory: { select: { slug: true } },
+                },
+              })
+            : Promise.resolve([]),
+          config.includeBlog
+            ? prisma.blogPost.findMany({
+                where: { status: "ENABLED" },
+                select: { title: true, updatedAt: true },
+              })
+            : Promise.resolve([]),
+          config.includeSeoPages
+            ? prisma.seoPage.findMany({
+                where: { isActive: true },
+                select: { path: true, updatedAt: true },
+              })
+            : Promise.resolve([]),
+        ]);
 
-    if (config.includeCategories) {
-      const categories = await prisma.category.findMany({
-        where: { status: "ENABLED" },
-        select: { slug: true, updatedAt: true },
-      });
-      categories.forEach((category) =>
-        entries.push(
-          buildUrlEntry(
-            `${baseUrl}/offerte/${category.slug}`,
-            category.updatedAt ? new Date(category.updatedAt).toISOString() : undefined
-          )
-        )
-      );
-    }
-
-    if (config.includeSubcategories) {
-      const subcategories = await prisma.subcategory.findMany({
-        where: { status: "ENABLED" },
-        include: {
-          parentCategory: { select: { slug: true } },
-        },
-      });
-      subcategories.forEach((subcategory) => {
-        const parentSlug = subcategory.parentCategory?.slug || "offerte";
-        entries.push(
-          buildUrlEntry(
-            `${baseUrl}/offerte/${parentSlug}/${subcategory.slug}`,
-            subcategory.updatedAt ? new Date(subcategory.updatedAt).toISOString() : undefined
+        stores.forEach((store) =>
+          entries.push(
+            buildUrlEntry(
+              `${baseUrl}/store/${store.slug}`,
+              store.updatedAt ? new Date(store.updatedAt).toISOString() : undefined
+            )
           )
         );
-      });
-    }
 
-    if (config.includeBlog) {
-      const posts = await prisma.blogPost.findMany({
-        where: { status: "ENABLED" },
-        select: { title: true, updatedAt: true },
-      });
-      posts.forEach((post) => {
-        const slug = String(post.title || "")
-          .trim()
-          .toLowerCase()
-          .replace(/[^a-z0-9]+/g, "-")
-          .replace(/^-|-$/g, "");
-        entries.push(
-          buildUrlEntry(
-            `${baseUrl}/blog/${slug || "post"}`,
-            post.updatedAt ? new Date(post.updatedAt).toISOString() : undefined
+        categories.forEach((category) =>
+          entries.push(
+            buildUrlEntry(
+              `${baseUrl}/offerte/${category.slug}`,
+              category.updatedAt ? new Date(category.updatedAt).toISOString() : undefined
+            )
           )
         );
-      });
-    }
 
-    if (config.includeSeoPages) {
-      const seoPages = await prisma.seoPage.findMany({
-        where: { isActive: true },
-        select: { path: true, updatedAt: true },
-      });
-      seoPages.forEach((page) =>
-        entries.push(
-          buildUrlEntry(
-            `${baseUrl}${page.path}`,
-            page.updatedAt ? new Date(page.updatedAt).toISOString() : undefined
+        subcategories.forEach((subcategory) => {
+          const parentSlug = subcategory.parentCategory?.slug || "offerte";
+          entries.push(
+            buildUrlEntry(
+              `${baseUrl}/offerte/${parentSlug}/${subcategory.slug}`,
+              subcategory.updatedAt ? new Date(subcategory.updatedAt).toISOString() : undefined
+            )
+          );
+        });
+
+        posts.forEach((post) => {
+          const slug = String(post.title || "")
+            .trim()
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, "-")
+            .replace(/^-|-$/g, "");
+          entries.push(
+            buildUrlEntry(
+              `${baseUrl}/blog/${slug || "post"}`,
+              post.updatedAt ? new Date(post.updatedAt).toISOString() : undefined
+            )
+          );
+        });
+
+        seoPages.forEach((page) =>
+          entries.push(
+            buildUrlEntry(
+              `${baseUrl}${page.path}`,
+              page.updatedAt ? new Date(page.updatedAt).toISOString() : undefined
+            )
           )
-        )
-      );
-    }
+        );
 
-    const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${entries.join(
-      "\n"
-    )}\n</urlset>`;
+        return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${entries.join(
+          "\n"
+        )}\n</urlset>`;
+      },
+      3600,
+      [CACHE_TAGS.SITEMAP, CACHE_TAGS.STORES, CACHE_TAGS.CATEGORIES, CACHE_TAGS.BLOG, CACHE_TAGS.SEO]
+    );
 
     return new NextResponse(xml, {
       headers: {

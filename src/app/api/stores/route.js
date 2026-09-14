@@ -4,6 +4,7 @@ import { requireRole } from "@/lib/auth/auth";
 import { ROLES } from "@/lib/auth/roles";
 import { handleAuthError } from "@/lib/api-errors";
 import { serializeStore } from "@/lib/serializer";
+import { appCache, CACHE_TAGS } from "@/lib/cache";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -17,64 +18,73 @@ export async function GET(request) {
     const featured = searchParams.get("featured");
     const category = searchParams.get("category");
 
-    let where = {};
-    if (active === "true") {
-      where.isActive = true;
-    } else if (active === "false") {
-      where.isActive = false;
-    }
+    const cacheKey = `stores:${active ?? "all"}:${search || ""}:${letter || ""}:${featured || "all"}:${category || "all"}`;
+    const data = await appCache.wrap(
+      cacheKey,
+      async () => {
+        let where = {};
+        if (active === "true") {
+          where.isActive = true;
+        } else if (active === "false") {
+          where.isActive = false;
+        }
 
-    if (featured === "true") {
-      where.coupons = {
-        some: {
-          isFeatured: true,
-          isActive: true,
-        },
-      };
-    }
+        if (featured === "true") {
+          where.coupons = {
+            some: {
+              isFeatured: true,
+              isActive: true,
+            },
+          };
+        }
 
-    if (category) {
-      where.categories = {
-        some: {
-          category: {
-            OR: [{ slug: category }, { id: category }],
+        if (category) {
+          where.categories = {
+            some: {
+              category: {
+                OR: [{ slug: category }, { id: category }],
+              },
+            },
+          };
+        }
+
+        if (search) {
+          where.OR = [
+            { name: { contains: search, mode: "insensitive" } },
+            { description: { contains: search, mode: "insensitive" } },
+          ];
+        }
+
+        if (letter) {
+          if (letter === "#") {
+            where.AND = "abcdefghijklmnopqrstuvwxyz".split("").map((char) => ({
+              NOT: { name: { startsWith: char, mode: "insensitive" } },
+            }));
+          } else {
+            where.name = { ...where.name, startsWith: letter, mode: "insensitive" };
+          }
+        }
+
+        const stores = await prisma.store.findMany({
+          where,
+          orderBy: { name: "asc" },
+          include: {
+            categories: { include: { category: true } },
+            subcategories: { select: { subcategoryId: true } },
+            coupons: {
+              where: { isActive: true },
+            },
           },
-        },
-      };
-    }
+        });
 
-    if (search) {
-      where.OR = [
-        { name: { contains: search, mode: "insensitive" } },
-        { description: { contains: search, mode: "insensitive" } },
-      ];
-    }
-
-    if (letter) {
-      if (letter === "#") {
-        where.AND = "abcdefghijklmnopqrstuvwxyz".split("").map((char) => ({
-          NOT: { name: { startsWith: char, mode: "insensitive" } },
-        }));
-      } else {
-        where.name = { ...where.name, startsWith: letter, mode: "insensitive" };
-      }
-    }
-
-    const stores = await prisma.store.findMany({
-      where,
-      orderBy: { name: "asc" },
-      include: {
-        categories: { include: { category: true } },
-        subcategories: { select: { subcategoryId: true } },
-        coupons: {
-          where: { isActive: true },
-        },
+        const serializedStores = stores.map((s) => serializeStore(s));
+        return { stores: serializedStores };
       },
-    });
+      3600,
+      CACHE_TAGS.STORES
+    );
 
-    const serializedStores = stores.map((s) => serializeStore(s));
-
-    return NextResponse.json({ stores: serializedStores }, { status: 200 });
+    return NextResponse.json(data, { status: 200 });
   } catch (error) {
     console.error("GET /api/stores Error:", error);
     return NextResponse.json({ message: "Internal Server Error" }, { status: 500 });
@@ -139,6 +149,7 @@ export async function POST(request) {
       },
     });
 
+    appCache.invalidateTag(CACHE_TAGS.STORES);
     return NextResponse.json({ store: serializeStore(newStore) }, { status: 201 });
   } catch (error) {
     const authResponse = handleAuthError(error);

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth/auth";
 import { ROLES } from "@/lib/auth/roles";
+import { appCache, CACHE_TAGS } from "@/lib/cache";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -32,15 +33,23 @@ function isValidTarget(value) {
 export async function GET(_request, { params }) {
   try {
     const { id } = await params;
-    const redirect = await prisma.redirect.findUnique({
-      where: { id },
-    });
+    const redirect = await appCache.wrap(
+      `seo:redirect:${id}`,
+      async () => {
+        const item = await prisma.redirect.findUnique({
+          where: { id },
+        });
+        return item ? { ...item, _id: item.id } : null;
+      },
+      300,
+      CACHE_TAGS.SEO
+    );
 
     if (!redirect) {
       return NextResponse.json({ message: "Redirect not found" }, { status: 404 });
     }
 
-    return NextResponse.json({ redirect: { ...redirect, _id: redirect.id } });
+    return NextResponse.json({ redirect });
   } catch (error) {
     console.error("GET /api/seo/redirects/[id] Error:", error);
     return NextResponse.json({ message: "Internal Server Error" }, { status: 500 });
@@ -103,6 +112,8 @@ export async function PUT(request, { params }) {
       },
     });
 
+    appCache.invalidateTag(CACHE_TAGS.SEO);
+
     return NextResponse.json({
       message: "Redirect updated successfully.",
       redirect: { ...redirect, _id: redirect.id },
@@ -132,6 +143,8 @@ export async function DELETE(_request, { params }) {
     await prisma.redirect.delete({
       where: { id },
     });
+
+    appCache.invalidateTag(CACHE_TAGS.SEO);
 
     return NextResponse.json({ message: "Redirect deleted successfully." });
   } catch (error) {

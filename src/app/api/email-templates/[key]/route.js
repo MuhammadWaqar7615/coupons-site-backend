@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth/auth";
 import { ROLES } from "@/lib/auth/roles";
 import { emailTemplateDefaults } from "@/lib/emailTemplates";
+import { appCache, CACHE_TAGS } from "@/lib/cache";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -16,18 +17,25 @@ export async function GET(request, { params }) {
       return NextResponse.json({ message: "Email template not found." }, { status: 404 });
     }
 
-    const dbItem = await prisma.emailTemplate.findUnique({ where: { templateKey: key } });
-    return NextResponse.json({
-      template: {
-        ...defaultTemplate,
-        fromName: dbItem?.fromName || "CodiceSconto",
-        sendAsPlainText: dbItem?.sendAsPlainText || false,
-        status: dbItem?.status ? dbItem.status.toLowerCase() : "enabled",
-        subject: dbItem?.subject || defaultTemplate.subject,
-        message: dbItem?.message || defaultTemplate.message,
-        _id: dbItem?.id || defaultTemplate.templateKey,
+    const template = await appCache.wrap(
+      `email-template:${key}`,
+      async () => {
+        const dbItem = await prisma.emailTemplate.findUnique({ where: { templateKey: key } });
+        return {
+          ...defaultTemplate,
+          fromName: dbItem?.fromName || "CodiceSconto",
+          sendAsPlainText: dbItem?.sendAsPlainText || false,
+          status: dbItem?.status ? dbItem.status.toLowerCase() : "enabled",
+          subject: dbItem?.subject || defaultTemplate.subject,
+          message: dbItem?.message || defaultTemplate.message,
+          _id: dbItem?.id || defaultTemplate.templateKey,
+        };
       },
-    });
+      300,
+      [CACHE_TAGS.EMAIL_TEMPLATES]
+    );
+
+    return NextResponse.json({ template });
   } catch (error) {
     console.error("GET /api/email-templates/[key] Error:", error);
     if (error.message === "Unauthorized" || error.message === "Forbidden") {
@@ -72,6 +80,8 @@ export async function PUT(request, { params }) {
         message: body.message,
       },
     });
+
+    appCache.invalidateTag(CACHE_TAGS.EMAIL_TEMPLATES);
 
     return NextResponse.json({
       message: "Email template saved successfully.",

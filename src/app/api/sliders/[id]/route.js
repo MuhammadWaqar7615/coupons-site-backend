@@ -4,6 +4,7 @@ import { requireRole } from "@/lib/auth/auth";
 import { ROLES } from "@/lib/auth/roles";
 import { deleteFromSupabase } from "@/lib/supabase";
 import { serializeSlider } from "@/lib/serializer";
+import { appCache, CACHE_TAGS } from "@/lib/cache";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -11,11 +12,21 @@ export const dynamic = "force-dynamic";
 export async function GET(request, { params }) {
   try {
     const { id } = await params;
-    const slider = await prisma.slider.findUnique({
-      where: { id },
-    });
-    if (!slider) return NextResponse.json({ message: "Slider not found" }, { status: 404 });
-    return NextResponse.json({ slider: serializeSlider(slider) });
+    const data = await appCache.wrap(
+      `slider:${id}`,
+      async () => {
+        const slider = await prisma.slider.findUnique({
+          where: { id },
+        });
+        if (!slider) return null;
+        return { slider: serializeSlider(slider) };
+      },
+      3600,
+      CACHE_TAGS.SLIDERS
+    );
+
+    if (!data) return NextResponse.json({ message: "Slider not found" }, { status: 404 });
+    return NextResponse.json(data);
   } catch (error) {
     console.error("GET /api/sliders/[id] Error:", error);
     return NextResponse.json({ message: "Internal Server Error" }, { status: 500 });
@@ -74,6 +85,7 @@ export async function PUT(request, { params }) {
       data: updateData,
     });
 
+    appCache.invalidateTag(CACHE_TAGS.SLIDERS);
     return NextResponse.json({ slider: serializeSlider(slider) });
   } catch (error) {
     console.error("PUT /api/sliders/[id] Error:", error);
@@ -107,6 +119,7 @@ export async function DELETE(request, { params }) {
       where: { id },
     });
 
+    appCache.invalidateTag(CACHE_TAGS.SLIDERS);
     return NextResponse.json({ message: "Slider deleted successfully" });
   } catch (error) {
     console.error("DELETE /api/sliders/[id] Error:", error);

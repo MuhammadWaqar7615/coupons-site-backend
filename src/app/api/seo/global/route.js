@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth/auth";
 import { ROLES } from "@/lib/auth/roles";
+import { appCache, CACHE_TAGS } from "@/lib/cache";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -30,18 +31,26 @@ function normalizeSocialLinks(value = {}) {
 
 export async function GET() {
   try {
-    const settings = await prisma.globalSeo.findFirst();
+    const data = await appCache.wrap(
+      "seo_global",
+      async () => {
+        const settings = await prisma.globalSeo.findFirst();
+        return {
+          settings: settings
+            ? {
+                ...settings,
+                _id: settings.id,
+                defaultKeywords: settings.defaultKeywords || [],
+                socialLinks: settings.socialLinks || {},
+              }
+            : null,
+        };
+      },
+      3600,
+      CACHE_TAGS.SEO
+    );
 
-    return NextResponse.json({
-      settings: settings
-        ? {
-            ...settings,
-            _id: settings.id,
-            defaultKeywords: settings.defaultKeywords || [],
-            socialLinks: settings.socialLinks || {},
-          }
-        : null,
-    });
+    return NextResponse.json(data);
   } catch (error) {
     console.error("GET /api/seo/global Error:", error);
     return NextResponse.json({ message: "Internal Server Error" }, { status: 500 });
@@ -88,8 +97,11 @@ export async function POST(request) {
       });
     }
 
+    appCache.invalidateTag(CACHE_TAGS.SEO);
+
     return NextResponse.json({
       message: "Global SEO settings saved successfully.",
+      theme: { ...settings, _id: settings.id },
       settings: { ...settings, _id: settings.id },
     });
   } catch (error) {

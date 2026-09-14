@@ -4,6 +4,7 @@ import { hashPassword } from "@/lib/auth/password";
 import { requireRole } from "@/lib/auth/auth";
 import { ROLES } from "@/lib/auth/roles";
 import { serializeUser } from "@/lib/serializer";
+import { appCache, CACHE_TAGS } from "@/lib/cache";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -19,11 +20,19 @@ export async function GET() {
   try {
     await requireRole([ROLES.ADMIN, ROLES.ADMINISTRATION]);
 
-    const users = await prisma.user.findMany({
-      orderBy: { createdAt: "desc" },
-    });
+    const users = await appCache.wrap(
+      "users:all",
+      async () => {
+        const list = await prisma.user.findMany({
+          orderBy: { createdAt: "desc" },
+        });
+        return list.map(serializeUser);
+      },
+      300,
+      CACHE_TAGS.USERS
+    );
 
-    return NextResponse.json({ users: users.map(serializeUser) });
+    return NextResponse.json({ users });
   } catch (error) {
     console.error("GET /api/users Error:", error);
     if (error.message === "Unauthorized" || error.message === "Forbidden") {
@@ -61,6 +70,8 @@ export async function POST(request) {
         status: (body.status || "enabled").toUpperCase() === "DISABLED" ? "DISABLED" : "ENABLED",
       },
     });
+
+    appCache.invalidateTag(CACHE_TAGS.USERS);
 
     return NextResponse.json({ user: serializeUser(user) }, { status: 201 });
   } catch (error) {

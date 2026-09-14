@@ -2,6 +2,7 @@ import { getSession } from "./session";
 import { ROLES } from "./roles";
 import prisma from "@/lib/prisma";
 import { verifyPassword } from "./password";
+import { appCache, CACHE_TAGS } from "@/lib/cache";
 
 export function normalizeRole(role) {
   if (!role) return "editor";
@@ -16,51 +17,54 @@ export function normalizeRole(role) {
 }
 
 export async function authenticateUser(email, password) {
-  const adminEmail = (process.env.ADMIN_EMAIL || "admin@admin.com").trim().toLowerCase();
-  const adminPassword = (process.env.ADMIN_PASSWORD || "123456").trim();
-
   const cleanEmail = (email || "").trim().toLowerCase();
   const cleanPassword = (password || "").trim();
 
+  if (!cleanEmail || !cleanPassword) return null;
+
   console.log(`[AUTH] Login attempt for email: "${cleanEmail}" (pwd len: ${cleanPassword.length})`);
 
-  // Emergency admin credentials check
-  const acceptedPasswords = new Set([
-    adminPassword,
-    "123456",
-    "testdbpasswordisthis",
-    "admin123",
-    "password",
-    "12345678"
-  ]);
-
-  const isEmergencyAdmin =
-    (cleanEmail === adminEmail || cleanEmail === "admin@admin.com") &&
-    acceptedPasswords.has(cleanPassword);
-
-  if (isEmergencyAdmin) {
-    console.log(`[AUTH] Emergency admin login SUCCESS for: "${cleanEmail}"`);
-    return {
-      userId: "admin-id-001",
-      email: adminEmail || cleanEmail,
-      role: normalizeRole(ROLES.ADMIN),
-    };
-  }
-
   try {
-    console.log(`[AUTH] Checking database for user: "${cleanEmail}"...`);
-    const user = await prisma.user.findUnique({
-      where: { email: cleanEmail },
-    });
+    const user = await appCache.wrap(
+      `user_auth:${cleanEmail}`,
+      async () => {
+        console.log(`[AUTH] Checking database for user: "${cleanEmail}"...`);
+        const found = await prisma.user.findUnique({
+          where: { email: cleanEmail },
+        });
+        return found || null;
+      },
+      120,
+      CACHE_TAGS.USERS
+    );
 
-    if (user && user.status === "ENABLED" && (await verifyPassword(cleanPassword, user.passwordHash))) {
-      console.log(`[AUTH] Database login SUCCESS for user: "${cleanEmail}"`);
-      return {
-        userId: user.id,
-        email: user.email,
-        role: normalizeRole(user.role),
-        name: user.name,
-      };
+    let activeUser = user;
+    if (activeUser && activeUser.status === "ENABLED") {
+      let isMatch = await verifyPassword(cleanPassword, activeUser.passwordHash);
+
+      // If cached password check failed, fetch fresh record from DB in case password was changed/seeded
+      if (!isMatch) {
+        const freshUser = await prisma.user.findUnique({
+          where: { email: cleanEmail },
+        });
+        if (freshUser && freshUser.status === "ENABLED") {
+          isMatch = await verifyPassword(cleanPassword, freshUser.passwordHash);
+          if (isMatch) {
+            appCache.set(`user_auth:${cleanEmail}`, freshUser, 300, CACHE_TAGS.USERS);
+            activeUser = freshUser;
+          }
+        }
+      }
+
+      if (isMatch) {
+        console.log(`[AUTH] Database login SUCCESS for user: "${cleanEmail}"`);
+        return {
+          userId: activeUser.id,
+          email: activeUser.email,
+          role: normalizeRole(activeUser.role),
+          name: activeUser.name,
+        };
+      }
     }
   } catch (dbErr) {
     console.warn(`[AUTH] Database query warning during login:`, dbErr?.message || dbErr);

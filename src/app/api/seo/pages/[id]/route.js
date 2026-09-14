@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth/auth";
 import { ROLES } from "@/lib/auth/roles";
+import { appCache, CACHE_TAGS } from "@/lib/cache";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -31,15 +32,23 @@ function isValidUrl(value) {
 export async function GET(_request, { params }) {
   try {
     const { id } = await params;
-    const page = await prisma.seoPage.findUnique({
-      where: { id },
-    });
+    const page = await appCache.wrap(
+      `seo:page:${id}`,
+      async () => {
+        const item = await prisma.seoPage.findUnique({
+          where: { id },
+        });
+        return item ? { ...item, _id: item.id } : null;
+      },
+      300,
+      CACHE_TAGS.SEO
+    );
 
     if (!page) {
       return NextResponse.json({ message: "SEO page not found" }, { status: 404 });
     }
 
-    return NextResponse.json({ page: { ...page, _id: page.id } });
+    return NextResponse.json({ page });
   } catch (error) {
     console.error("GET /api/seo/pages/[id] Error:", error);
     return NextResponse.json({ message: "Internal Server Error" }, { status: 500 });
@@ -119,6 +128,9 @@ export async function PUT(request, { params }) {
       data: payload,
     });
 
+    appCache.invalidateTag(CACHE_TAGS.SEO);
+    appCache.invalidateTag(CACHE_TAGS.SITEMAP);
+
     return NextResponse.json({
       message: "SEO page updated successfully.",
       page: { ...page, _id: page.id },
@@ -148,6 +160,9 @@ export async function DELETE(_request, { params }) {
     await prisma.seoPage.delete({
       where: { id },
     });
+
+    appCache.invalidateTag(CACHE_TAGS.SEO);
+    appCache.invalidateTag(CACHE_TAGS.SITEMAP);
 
     return NextResponse.json({ message: "SEO page deleted successfully." });
   } catch (error) {
