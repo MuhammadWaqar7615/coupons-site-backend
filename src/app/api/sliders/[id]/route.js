@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth/auth";
 import { ROLES } from "@/lib/auth/roles";
-import { deleteFromSupabase } from "@/lib/supabase";
+import { deleteFromSupabase, queueDeleteFromSupabase } from "@/lib/supabase";
 import { serializeSlider } from "@/lib/serializer";
 import { appCache, CACHE_TAGS } from "@/lib/cache";
 
@@ -45,17 +45,17 @@ export async function PUT(request, { params }) {
     });
     if (!currentSlider) return NextResponse.json({ message: "Slider not found" }, { status: 404 });
 
-    // Clean up old image / logo if changed
+    // Clean up old image / logo in background if changed
     const oldImagePath = currentSlider.imageStoragePath || currentSlider.imagePublicId;
     const newImagePath = body.imageStoragePath || body.imagePublicId;
     if (oldImagePath && newImagePath && oldImagePath !== newImagePath) {
-      await deleteFromSupabase("coupon-banners", oldImagePath);
+      queueDeleteFromSupabase("coupon-banners", oldImagePath);
     }
 
     const oldLogoPath = currentSlider.logoStoragePath || currentSlider.logoPublicId;
     const newLogoPath = body.logoStoragePath || body.logoPublicId;
     if (oldLogoPath && newLogoPath && oldLogoPath !== newLogoPath) {
-      await deleteFromSupabase("store-images", oldLogoPath);
+      queueDeleteFromSupabase("store-images", oldLogoPath);
     }
 
     const updateData = {};
@@ -106,13 +106,14 @@ export async function DELETE(request, { params }) {
     });
     if (!slider) return NextResponse.json({ message: "Slider not found" }, { status: 404 });
 
+    // Clean up Supabase storage in background without blocking HTTP response
     const imagePath = slider.imageStoragePath || slider.imagePublicId;
     if (imagePath) {
-      await deleteFromSupabase("coupon-banners", imagePath);
+      queueDeleteFromSupabase("coupon-banners", imagePath);
     }
     const logoPath = slider.logoStoragePath || slider.logoPublicId;
     if (logoPath) {
-      await deleteFromSupabase("store-images", logoPath);
+      queueDeleteFromSupabase("store-images", logoPath);
     }
 
     await prisma.slider.delete({
@@ -121,6 +122,7 @@ export async function DELETE(request, { params }) {
 
     appCache.invalidateTag(CACHE_TAGS.SLIDERS);
     return NextResponse.json({ message: "Slider deleted successfully" });
+
   } catch (error) {
     console.error("DELETE /api/sliders/[id] Error:", error);
     if (error.message === "Unauthorized" || error.message === "Forbidden") {

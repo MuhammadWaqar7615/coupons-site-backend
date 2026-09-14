@@ -1,3 +1,6 @@
 export async function register() {
-  // no-op
+  if (process.env.NEXT_RUNTIME === "nodejs") {
+    const { applyDnsPatch } = await import("./lib/dnsPatch.js");
+    applyDnsPatch();
+  }
 }

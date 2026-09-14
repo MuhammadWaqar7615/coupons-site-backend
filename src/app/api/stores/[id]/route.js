@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth/auth";
 import { ROLES } from "@/lib/auth/roles";
 import { handleAuthError } from "@/lib/api-errors";
-import { deleteFromSupabase } from "@/lib/supabase";
+import { deleteFromSupabase, queueDeleteFromSupabase } from "@/lib/supabase";
 import { serializeStore } from "@/lib/serializer";
 import { appCache, CACHE_TAGS } from "@/lib/cache";
 
@@ -81,7 +81,7 @@ export async function PUT(request, { params }) {
     const oldLogoPath = currentStore.logoStoragePath || currentStore.logoPublicId;
     const newLogoPath = data.logoStoragePath || data.logoPublicId;
     if (oldLogoPath && newLogoPath && oldLogoPath !== newLogoPath) {
-      await deleteFromSupabase("store-images", oldLogoPath);
+      queueDeleteFromSupabase("store-images", oldLogoPath);
     }
 
     const {
@@ -133,9 +133,21 @@ export async function PUT(request, { params }) {
       }
     );
 
-    appCache.invalidateTag(CACHE_TAGS.STORES);
+    const serialized = serializeStore(updatedStore);
+
+    // Optimistic cache update: update record in stores:all:::all:all if cached
+    const cachedStores = appCache.get("stores:all:::all:all");
+    if (cachedStores && Array.isArray(cachedStores.stores)) {
+      cachedStores.stores = cachedStores.stores.map((s) =>
+        (s._id || s.id) === id ? serialized : s
+      );
+      appCache.set("stores:all:::all:all", cachedStores, 3600, CACHE_TAGS.STORES);
+    } else {
+      appCache.invalidateTag(CACHE_TAGS.STORES);
+    }
     appCache.invalidateTag(CACHE_TAGS.COUPONS);
-    return NextResponse.json({ store: serializeStore(updatedStore) }, { status: 200 });
+
+    return NextResponse.json({ store: serialized }, { status: 200 });
   } catch (error) {
     const authResponse = handleAuthError(error);
     if (authResponse) return authResponse;
@@ -159,18 +171,28 @@ export async function DELETE(request, { params }) {
       return NextResponse.json({ message: "Store not found" }, { status: 404 });
     }
 
+    // Clean up Supabase storage in background without blocking HTTP response
     const logoPath = storeToDelete.logoStoragePath || storeToDelete.logoPublicId;
     if (logoPath) {
-      await deleteFromSupabase("store-images", logoPath);
+      queueDeleteFromSupabase("store-images", logoPath);
     }
 
     await prisma.store.delete({
       where: { id },
     });
 
-    appCache.invalidateTag(CACHE_TAGS.STORES);
+    // Optimistic cache update: remove directly from stores:all:::all:all if cached
+    const cachedStores = appCache.get("stores:all:::all:all");
+    if (cachedStores && Array.isArray(cachedStores.stores)) {
+      cachedStores.stores = cachedStores.stores.filter((s) => (s._id || s.id) !== id);
+      appCache.set("stores:all:::all:all", cachedStores, 3600, CACHE_TAGS.STORES);
+    } else {
+      appCache.invalidateTag(CACHE_TAGS.STORES);
+    }
     appCache.invalidateTag(CACHE_TAGS.COUPONS);
+
     return NextResponse.json({ message: "Store deleted successfully" }, { status: 200 });
+
   } catch (error) {
     const authResponse = handleAuthError(error);
     if (authResponse) return authResponse;

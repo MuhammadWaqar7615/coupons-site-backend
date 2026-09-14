@@ -106,7 +106,7 @@ export async function prewarmCoreCache() {
     // 4. Pre-warm UI Assets: Sliders, Badges, Banners, Blog
     try {
       const sliders = await prisma.slider.findMany({
-        orderBy: { orderIndex: "asc" },
+        orderBy: { createdAt: "asc" },
       });
       appCache.set(
         "sliders:all",
@@ -186,14 +186,11 @@ export async function prewarmCoreCache() {
 
     // 6. Pre-warm Admin Dashboard Elements: SEO, Translations, Email Templates, Users
     try {
-      const [globalSeo, pageSeoCount, activePageSeoCount, redirectCount, activeRedirectCount] =
-        await Promise.all([
-          prisma.globalSeo.findFirst(),
-          prisma.seoPage.count(),
-          prisma.seoPage.count({ where: { isActive: true } }),
-          prisma.redirect.count(),
-          prisma.redirect.count({ where: { isActive: true } }),
-        ]);
+      const globalSeo = await prisma.globalSeo.findFirst();
+      const pageSeoCount = await prisma.seoPage.count();
+      const activePageSeoCount = await prisma.seoPage.count({ where: { isActive: true } });
+      const redirectCount = await prisma.redirect.count();
+      const activeRedirectCount = await prisma.redirect.count({ where: { isActive: true } });
 
       appCache.set(
         "seo_dashboard",

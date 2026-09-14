@@ -149,8 +149,20 @@ export async function POST(request) {
       },
     });
 
-    appCache.invalidateTag(CACHE_TAGS.STORES);
-    return NextResponse.json({ store: serializeStore(newStore) }, { status: 201 });
+    const serialized = serializeStore(newStore);
+
+    // Optimistic cache update: append to stores:all:::all:all if cached
+    const cachedStores = appCache.get("stores:all:::all:all");
+    if (cachedStores && Array.isArray(cachedStores.stores)) {
+      cachedStores.stores = [...cachedStores.stores, serialized].sort((a, b) =>
+        (a.name || "").localeCompare(b.name || "")
+      );
+      appCache.set("stores:all:::all:all", cachedStores, 3600, CACHE_TAGS.STORES);
+    } else {
+      appCache.invalidateTag(CACHE_TAGS.STORES);
+    }
+
+    return NextResponse.json({ store: serialized }, { status: 201 });
   } catch (error) {
     const authResponse = handleAuthError(error);
     if (authResponse) return authResponse;

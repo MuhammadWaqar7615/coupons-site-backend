@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth/auth";
 import { ROLES } from "@/lib/auth/roles";
-import { deleteFromSupabase } from "@/lib/supabase";
+import { deleteFromSupabase, queueDeleteFromSupabase } from "@/lib/supabase";
 import { appCache, CACHE_TAGS } from "@/lib/cache";
 
 export const runtime = "nodejs";
@@ -83,11 +83,11 @@ export async function PUT(request, { params }) {
 
     const body = await request.json();
 
-    // Check if image changed and delete old image from Supabase
+    // Check if image changed and delete old image from Supabase in background
     const oldPath = currentCategory.imageStoragePath || currentCategory.imagePublicId;
     const newPath = body.imageStoragePath || body.imagePublicId;
     if (oldPath && newPath && oldPath !== newPath) {
-      await deleteFromSupabase("store-images", oldPath);
+      queueDeleteFromSupabase("store-images", oldPath);
     }
 
     const updateData = {};
@@ -136,9 +136,10 @@ export async function DELETE(request, { params }) {
     });
     if (!categoryToDelete) return NextResponse.json({ message: "Category not found" }, { status: 404 });
 
+    // Clean up Supabase storage in background without blocking HTTP response
     const path = categoryToDelete.imageStoragePath || categoryToDelete.imagePublicId;
     if (path) {
-      await deleteFromSupabase("store-images", path);
+      queueDeleteFromSupabase("store-images", path);
     }
 
     await prisma.category.delete({

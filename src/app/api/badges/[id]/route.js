@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth/auth";
 import { ROLES } from "@/lib/auth/roles";
-import { deleteFromSupabase } from "@/lib/supabase";
+import { deleteFromSupabase, queueDeleteFromSupabase } from "@/lib/supabase";
 import { serializeBadge } from "@/lib/serializer";
 import { appCache, CACHE_TAGS } from "@/lib/cache";
 
@@ -50,15 +50,14 @@ export async function PUT(request, { params }) {
     const oldPath = currentBadge.imageStoragePath || currentBadge.imagePublicId;
     const newPath = body.imageStoragePath || body.imagePublicId;
     if (oldPath && newPath && oldPath !== newPath) {
-      await deleteFromSupabase("store-images", oldPath);
+      queueDeleteFromSupabase("store-images", oldPath);
     }
 
     const badge = await prisma.badge.update({
       where: { id },
       data: {
-        name: body.name,
-        image: body.image,
-        imagePublicId: body.imagePublicId || null,
+        name: body.name.trim(),
+        image: body.image.trim(),
         imageStoragePath: newPath || null,
       },
     });
@@ -86,12 +85,13 @@ export async function DELETE(request, { params }) {
 
     const path = badgeToDelete.imageStoragePath || badgeToDelete.imagePublicId;
     if (path) {
-      await deleteFromSupabase("store-images", path);
+      queueDeleteFromSupabase("store-images", path);
     }
 
     await prisma.badge.delete({
       where: { id },
     });
+
 
     appCache.invalidateTag(CACHE_TAGS.BADGES);
     return NextResponse.json({ message: "Badge deleted successfully" });

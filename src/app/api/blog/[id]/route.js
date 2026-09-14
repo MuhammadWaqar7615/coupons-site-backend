@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth/auth";
 import { ROLES } from "@/lib/auth/roles";
-import { deleteFromSupabase } from "@/lib/supabase";
+import { deleteFromSupabase, queueDeleteFromSupabase } from "@/lib/supabase";
 import { serializePost } from "@/lib/serializer";
 import { appCache, CACHE_TAGS } from "@/lib/cache";
 
@@ -54,7 +54,7 @@ export async function PUT(request, { params }) {
     const oldPath = currentPost.imageStoragePath || currentPost.imagePublicId;
     const newPath = body.imageStoragePath || body.imagePublicId;
     if (oldPath && newPath && oldPath !== newPath) {
-      await deleteFromSupabase("store-images", oldPath);
+      queueDeleteFromSupabase("store-images", oldPath);
     }
 
     const post = await prisma.blogPost.update({
@@ -94,14 +94,16 @@ export async function DELETE(request, { params }) {
     });
     if (!postToDelete) return NextResponse.json({ message: "Blog post not found" }, { status: 404 });
 
+    // Clean up Supabase storage in background without blocking HTTP response
     const path = postToDelete.imageStoragePath || postToDelete.imagePublicId;
     if (path) {
-      await deleteFromSupabase("store-images", path);
+      queueDeleteFromSupabase("store-images", path);
     }
 
     await prisma.blogPost.delete({
       where: { id: postToDelete.id },
     });
+
 
     appCache.invalidateTag(CACHE_TAGS.BLOG);
     return NextResponse.json({ message: "Blog post deleted successfully" });

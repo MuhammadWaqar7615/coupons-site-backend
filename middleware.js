@@ -1,6 +1,30 @@
 import { NextResponse } from "next/server";
 
+// Global in-memory request metrics store
+const globalForHttp = globalThis;
+if (!globalForHttp.__httpMetricsStore) {
+  globalForHttp.__httpMetricsStore = {
+    totalRequests: 0,
+    requests: [], // { timestamp, path, method }
+  };
+}
+
 export function middleware(request) {
+  const store = globalForHttp.__httpMetricsStore;
+  if (store) {
+    const now = Date.now();
+    store.totalRequests++;
+    store.requests.push({
+      timestamp: now,
+      path: request.nextUrl.pathname,
+      method: request.method,
+    });
+    // Keep only last 200 requests
+    if (store.requests.length > 200) {
+      store.requests.shift();
+    }
+  }
+
   const rawOrigin = request.headers.get("origin");
   const origin = rawOrigin ? rawOrigin.trim().replace(/\/$/, "") : null;
   const allowedOriginsEnv = process.env.ALLOWED_ORIGINS || "";
@@ -50,3 +74,4 @@ export function middleware(request) {
 export const config = {
   matcher: ["/api/:path*", "/robots.txt", "/sitemap.xml"],
 };
+

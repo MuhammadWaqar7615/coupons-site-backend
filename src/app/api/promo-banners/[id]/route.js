@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth/auth";
 import { ROLES } from "@/lib/auth/roles";
-import { deleteFromSupabase } from "@/lib/supabase";
+import { deleteFromSupabase, queueDeleteFromSupabase } from "@/lib/supabase";
 import { serializeBanner } from "@/lib/serializer";
 import { appCache, CACHE_TAGS } from "@/lib/cache";
 
@@ -50,7 +50,7 @@ export async function PUT(request, { params }) {
     const oldPath = currentBanner.imageStoragePath || currentBanner.imagePublicId;
     const newPath = body.imageStoragePath || body.imagePublicId;
     if (oldPath && newPath && oldPath !== newPath) {
-      await deleteFromSupabase("store-images", oldPath);
+      queueDeleteFromSupabase("store-images", oldPath);
     }
 
     const promoBanner = await prisma.promoBanner.update({
@@ -86,14 +86,16 @@ export async function DELETE(request, { params }) {
     });
     if (!bannerToDelete) return NextResponse.json({ message: "Promo banner not found" }, { status: 404 });
 
+    // Clean up Supabase storage in background without blocking HTTP response
     const path = bannerToDelete.imageStoragePath || bannerToDelete.imagePublicId;
     if (path) {
-      await deleteFromSupabase("store-images", path);
+      queueDeleteFromSupabase("store-images", path);
     }
 
     await prisma.promoBanner.delete({
       where: { id },
     });
+
 
     appCache.invalidateTag(CACHE_TAGS.BANNERS);
     return NextResponse.json({ message: "Promo banner deleted successfully" });

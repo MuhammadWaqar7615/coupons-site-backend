@@ -101,11 +101,20 @@ export async function POST(request) {
       },
     });
 
-    appCache.invalidateTag(CACHE_TAGS.COUPONS);
+    const serialized = serializeCoupon(newCoupon);
+
+    // Optimistic cache update: prepend to coupons:all if cached
+    const cachedCoupons = appCache.get("coupons:all");
+    if (cachedCoupons && Array.isArray(cachedCoupons.data)) {
+      cachedCoupons.data = [serialized, ...cachedCoupons.data];
+      appCache.set("coupons:all", cachedCoupons, 3600, CACHE_TAGS.COUPONS);
+    } else {
+      appCache.invalidateTag(CACHE_TAGS.COUPONS);
+    }
     appCache.invalidateTag(CACHE_TAGS.STORES);
 
     return NextResponse.json(
-      { success: true, data: serializeCoupon(newCoupon) },
+      { success: true, data: serialized },
       { status: 201 }
     );
   } catch (error) {

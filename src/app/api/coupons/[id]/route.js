@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth/auth";
 import { ROLES } from "@/lib/auth/roles";
-import { deleteFromSupabase } from "@/lib/supabase";
+import { deleteFromSupabase, queueDeleteFromSupabase } from "@/lib/supabase";
 import { serializeCoupon } from "@/lib/serializer";
 import { appCache, CACHE_TAGS } from "@/lib/cache";
 
@@ -68,11 +68,11 @@ export async function PUT(request, { params }) {
       return NextResponse.json({ success: false, error: "Coupon URL is required for 'link' type" }, { status: 400 });
     }
 
-    // Clean up old image if changed
+    // Clean up old image in background if changed
     const oldPath = existingCoupon.imageStoragePath;
     const newPath = body.imageStoragePath || body.imagePublicId;
     if (oldPath && newPath && oldPath !== newPath) {
-      await deleteFromSupabase("coupon-banners", oldPath);
+      queueDeleteFromSupabase("coupon-banners", oldPath);
     }
 
     const updateData = {};
@@ -105,8 +105,19 @@ export async function PUT(request, { params }) {
     });
 
     const serialized = serializeCoupon(updatedCoupon);
-    appCache.invalidateTag(CACHE_TAGS.COUPONS);
+
+    // Optimistic cache update: update record in coupons:all if cached
+    const cachedCoupons = appCache.get("coupons:all");
+    if (cachedCoupons && Array.isArray(cachedCoupons.data)) {
+      cachedCoupons.data = cachedCoupons.data.map((c) =>
+        (c._id || c.id) === id ? serialized : c
+      );
+      appCache.set("coupons:all", cachedCoupons, 3600, CACHE_TAGS.COUPONS);
+    } else {
+      appCache.invalidateTag(CACHE_TAGS.COUPONS);
+    }
     appCache.invalidateTag(CACHE_TAGS.STORES);
+
     return NextResponse.json({ success: true, data: serialized, coupon: serialized });
   } catch (error) {
     console.error("Error updating coupon:", error);
@@ -131,16 +142,25 @@ export async function DELETE(request, { params }) {
       return NextResponse.json({ success: false, error: "Coupon not found" }, { status: 404 });
     }
 
+    // Clean up Supabase storage in background without blocking HTTP response
     if (coupon.imageStoragePath) {
-      await deleteFromSupabase("coupon-banners", coupon.imageStoragePath);
+      queueDeleteFromSupabase("coupon-banners", coupon.imageStoragePath);
     }
 
     await prisma.coupon.delete({
       where: { id },
     });
 
-    appCache.invalidateTag(CACHE_TAGS.COUPONS);
+    // Optimistic cache update: remove directly from coupons:all if cached
+    const cachedCoupons = appCache.get("coupons:all");
+    if (cachedCoupons && Array.isArray(cachedCoupons.data)) {
+      cachedCoupons.data = cachedCoupons.data.filter((c) => (c._id || c.id) !== id);
+      appCache.set("coupons:all", cachedCoupons, 3600, CACHE_TAGS.COUPONS);
+    } else {
+      appCache.invalidateTag(CACHE_TAGS.COUPONS);
+    }
     appCache.invalidateTag(CACHE_TAGS.STORES);
+
     return NextResponse.json({ success: true, message: "Coupon deleted successfully" });
   } catch (error) {
     console.error("Error deleting coupon:", error);
@@ -150,3 +170,4 @@ export async function DELETE(request, { params }) {
     return NextResponse.json({ success: false, error: "Server Error" }, { status: 500 });
   }
 }
+

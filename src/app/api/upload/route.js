@@ -51,13 +51,22 @@ export async function POST(request) {
       );
     }
 
-    // Upload to Supabase Storage
-    const { data: uploadData, error: uploadError } = await supabase.storage
+    // Upload to Supabase Storage with 10s timeout guard
+    const uploadPromise = supabase.storage
       .from(bucket)
       .upload(storagePath, buffer, {
         contentType: file.type,
         upsert: false,
       });
+
+    const uploadTimeout = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error("Supabase storage upload timed out after 10 seconds")), 10000)
+    );
+
+    const { data: uploadData, error: uploadError } = await Promise.race([
+      uploadPromise,
+      uploadTimeout,
+    ]);
 
     if (uploadError) {
       console.error("Supabase storage upload error:", uploadError);

@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth/auth";
 import { ROLES } from "@/lib/auth/roles";
 import { handleAuthError } from "@/lib/api-errors";
-import { deleteFromSupabase } from "@/lib/supabase";
+import { deleteFromSupabase, queueDeleteFromSupabase } from "@/lib/supabase";
 import { appCache, CACHE_TAGS } from "@/lib/cache";
 
 export const runtime = "nodejs";
@@ -27,7 +27,7 @@ export async function POST(request) {
     for (const store of storesToDelete) {
       const path = store.logoStoragePath || store.logoPublicId;
       if (path) {
-        await deleteFromSupabase("store-images", path);
+        queueDeleteFromSupabase("store-images", path);
       }
     }
 
@@ -35,13 +35,23 @@ export async function POST(request) {
       where: { id: { in: data.storeIds } },
     });
 
-    appCache.invalidateTag(CACHE_TAGS.STORES);
+    const deletedSet = new Set(data.storeIds);
+    const cachedStores = appCache.get("stores:all:::all:all");
+    if (cachedStores && Array.isArray(cachedStores.stores)) {
+      cachedStores.stores = cachedStores.stores.filter(
+        (s) => !deletedSet.has(s._id) && !deletedSet.has(s.id)
+      );
+      appCache.set("stores:all:::all:all", cachedStores, 3600, CACHE_TAGS.STORES);
+    } else {
+      appCache.invalidateTag(CACHE_TAGS.STORES);
+    }
     appCache.invalidateTag(CACHE_TAGS.COUPONS);
 
     return NextResponse.json(
       { message: `Successfully deleted ${result.count} stores.`, count: result.count },
       { status: 200 }
     );
+
   } catch (error) {
     const authResponse = handleAuthError(error);
     if (authResponse) return authResponse;
