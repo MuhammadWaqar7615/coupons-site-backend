@@ -110,6 +110,15 @@ export function serializeBanner(b) {
   };
 }
 
+export function serializeMainBanner(b) {
+  if (!b) return null;
+  return {
+    ...b,
+    _id: b.id,
+    status: b.status ? b.status.toLowerCase() : "enabled",
+  };
+}
+
 export function serializeBadge(b) {
   if (!b) return null;
   return {

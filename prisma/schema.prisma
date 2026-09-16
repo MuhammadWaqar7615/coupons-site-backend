@@ -210,6 +210,22 @@ model PromoBanner {
   @@map("promo_banners")
 }
 
+model MainBanner {
+  id               String   @id @default(uuid())
+  name             String
+  image            String   @default("/images/placeholder.png")
+  imagePublicId    String?
+  imageStoragePath String?
+  link             String?  @default("#")
+  altText          String?
+  status           Status   @default(ENABLED)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([status, createdAt])
+  @@map("main_banners")
+}
+
 model Translation {
   id        String   @id @default(uuid())
   key       String   @unique
