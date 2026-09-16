@@ -49,26 +49,29 @@ export async function POST(request) {
     await requireRole([ROLES.ADMIN, ROLES.ADMINISTRATION]);
 
     const body = await request.json();
-    if (!body.title?.trim()) {
-      return NextResponse.json({ message: "Title is required." }, { status: 400 });
+    if (!body.image?.trim() || !body.mobileImage?.trim()) {
+      return NextResponse.json({ message: "Desktop and mobile images are required." }, { status: 400 });
     }
 
     const slider = await prisma.slider.create({
       data: {
-        title: body.title,
-        description: body.description || null,
-        discount: body.discount || null,
-        logo: body.logo || "/images/placeholder.png",
-        logoPublicId: body.logoPublicId || null,
-        logoStoragePath: body.logoStoragePath || body.logoPublicId || null,
-        link: body.link || "#",
-        featured: body.featured !== undefined ? Boolean(body.featured) : false,
-        seoTitle: body.seoTitle || null,
-        seoDescription: body.seoDescription || null,
+        title: body.title?.trim() || "",
+        description: null,
+        discount: null,
+        logo: "/images/placeholder.png",
+        logoPublicId: null,
+        logoStoragePath: null,
+        link: "#",
+        featured: false,
+        seoTitle: null,
+        seoDescription: null,
         status: (body.status || "enabled").toUpperCase() === "DISABLED" ? "DISABLED" : "ENABLED",
-        image: body.image || "/images/placeholder.png",
+        image: body.image.trim(),
         imagePublicId: body.imagePublicId || null,
         imageStoragePath: body.imageStoragePath || body.imagePublicId || null,
+        mobileImage: body.mobileImage.trim(),
+        mobileImagePublicId: body.mobileImagePublicId || null,
+        mobileImageStoragePath: body.mobileImageStoragePath || body.mobileImagePublicId || null,
       },
     });
 

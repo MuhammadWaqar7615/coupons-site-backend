@@ -26,10 +26,10 @@ export async function POST(request) {
       return NextResponse.json({ message: "File must be an image" }, { status: 400 });
     }
 
-    // Limit size to 5MB
-    const MAX_SIZE = 5 * 1024 * 1024;
+    // High-resolution slider artwork may be larger than regular site images.
+    const MAX_SIZE = requestedBucket === "coupon-banners" ? 50 * 1024 * 1024 : 5 * 1024 * 1024;
     if (file.size > MAX_SIZE) {
-      return NextResponse.json({ message: "File size exceeds 5MB limit" }, { status: 400 });
+      return NextResponse.json({ message: `File size exceeds ${MAX_SIZE / (1024 * 1024)}MB limit` }, { status: 400 });
     }
 
     const bytes = await file.arrayBuffer();

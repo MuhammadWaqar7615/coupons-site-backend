@@ -38,7 +38,9 @@ export async function PUT(request, { params }) {
     await requireRole([ROLES.ADMIN, ROLES.ADMINISTRATION]);
     const { id } = await params;
     const body = await request.json();
-    if (!body.title?.trim()) return NextResponse.json({ message: "Title is required." }, { status: 400 });
+    if (!body.image?.trim() || !body.mobileImage?.trim()) {
+      return NextResponse.json({ message: "Desktop and mobile images are required." }, { status: 400 });
+    }
 
     const currentSlider = await prisma.slider.findUnique({
       where: { id },
@@ -58,27 +60,30 @@ export async function PUT(request, { params }) {
       queueDeleteFromSupabase("store-images", oldLogoPath);
     }
 
+    const oldMobileImagePath = currentSlider.mobileImageStoragePath || currentSlider.mobileImagePublicId;
+    const newMobileImagePath = body.mobileImageStoragePath || body.mobileImagePublicId;
+    if (oldMobileImagePath && newMobileImagePath && oldMobileImagePath !== newMobileImagePath) {
+      queueDeleteFromSupabase("coupon-banners", oldMobileImagePath);
+    }
+
     const updateData = {};
-    if (body.title !== undefined) updateData.title = body.title;
-    if (body.description !== undefined) updateData.description = body.description || null;
-    if (body.discount !== undefined) updateData.discount = body.discount || null;
-    if (body.logo !== undefined) updateData.logo = body.logo;
-    if (newLogoPath !== undefined) {
-      updateData.logoPublicId = body.logoPublicId || null;
-      updateData.logoStoragePath = newLogoPath || null;
-    }
-    if (body.link !== undefined) updateData.link = body.link || "#";
-    if (body.featured !== undefined) updateData.featured = Boolean(body.featured);
-    if (body.seoTitle !== undefined) updateData.seoTitle = body.seoTitle || null;
-    if (body.seoDescription !== undefined) updateData.seoDescription = body.seoDescription || null;
-    if (body.status !== undefined) {
-      updateData.status = (body.status || "enabled").toUpperCase() === "DISABLED" ? "DISABLED" : "ENABLED";
-    }
-    if (body.image !== undefined) updateData.image = body.image;
-    if (newImagePath !== undefined) {
-      updateData.imagePublicId = body.imagePublicId || null;
-      updateData.imageStoragePath = newImagePath || null;
-    }
+    updateData.title = "";
+    updateData.description = null;
+    updateData.discount = null;
+    updateData.logo = "/images/placeholder.png";
+    updateData.logoPublicId = null;
+    updateData.logoStoragePath = null;
+    updateData.link = "#";
+    updateData.featured = false;
+    updateData.seoTitle = null;
+    updateData.seoDescription = null;
+    updateData.status = (body.status || "enabled").toUpperCase() === "DISABLED" ? "DISABLED" : "ENABLED";
+    updateData.image = body.image.trim();
+    updateData.imagePublicId = body.imagePublicId || null;
+    updateData.imageStoragePath = newImagePath || null;
+    updateData.mobileImage = body.mobileImage.trim();
+    updateData.mobileImagePublicId = body.mobileImagePublicId || null;
+    updateData.mobileImageStoragePath = newMobileImagePath || null;
 
     const slider = await prisma.slider.update({
       where: { id },
@@ -110,6 +115,10 @@ export async function DELETE(request, { params }) {
     const imagePath = slider.imageStoragePath || slider.imagePublicId;
     if (imagePath) {
       queueDeleteFromSupabase("coupon-banners", imagePath);
+    }
+    const mobileImagePath = slider.mobileImageStoragePath || slider.mobileImagePublicId;
+    if (mobileImagePath) {
+      queueDeleteFromSupabase("coupon-banners", mobileImagePath);
     }
     const logoPath = slider.logoStoragePath || slider.logoPublicId;
     if (logoPath) {

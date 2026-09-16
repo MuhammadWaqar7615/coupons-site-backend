@@ -188,6 +188,9 @@ model Slider {
   image            String?  @default("/images/placeholder.png")
   imagePublicId    String?
   imageStoragePath String?
+  mobileImage            String?  @default("/images/placeholder.png")
+  mobileImagePublicId    String?
+  mobileImageStoragePath String?
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
