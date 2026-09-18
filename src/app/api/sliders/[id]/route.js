@@ -5,6 +5,7 @@ import { ROLES } from "@/lib/auth/roles";
 import { deleteFromSupabase, queueDeleteFromSupabase } from "@/lib/supabase";
 import { serializeSlider } from "@/lib/serializer";
 import { appCache, CACHE_TAGS } from "@/lib/cache";
+import { normalizeSliderLink } from "@/lib/sliderLink";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -42,6 +43,8 @@ export async function PUT(request, { params }) {
       return NextResponse.json({ message: "Desktop and mobile images are required." }, { status: 400 });
     }
 
+    const sliderLink = normalizeSliderLink(body.link ?? body.url);
+
     const currentSlider = await prisma.slider.findUnique({
       where: { id },
     });
@@ -73,7 +76,7 @@ export async function PUT(request, { params }) {
     updateData.logo = "/images/placeholder.png";
     updateData.logoPublicId = null;
     updateData.logoStoragePath = null;
-    updateData.link = "#";
+    updateData.link = sliderLink;
     updateData.featured = false;
     updateData.seoTitle = null;
     updateData.seoDescription = null;

@@ -4,6 +4,7 @@ import { requireRole } from "@/lib/auth/auth";
 import { ROLES } from "@/lib/auth/roles";
 import { serializeSlider } from "@/lib/serializer";
 import { appCache, CACHE_TAGS } from "@/lib/cache";
+import { normalizeSliderLink } from "@/lib/sliderLink";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -53,6 +54,8 @@ export async function POST(request) {
       return NextResponse.json({ message: "Desktop and mobile images are required." }, { status: 400 });
     }
 
+    const sliderLink = normalizeSliderLink(body.link ?? body.url);
+
     const slider = await prisma.slider.create({
       data: {
         title: body.title?.trim() || "",
@@ -61,7 +64,7 @@ export async function POST(request) {
         logo: "/images/placeholder.png",
         logoPublicId: null,
         logoStoragePath: null,
-        link: "#",
+        link: sliderLink,
         featured: false,
         seoTitle: null,
         seoDescription: null,
